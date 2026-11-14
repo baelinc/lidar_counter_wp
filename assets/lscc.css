@@ -1,0 +1,28 @@
+/* Light Show Car Counter - front end + admin */
+.lscc { --lscc-accent: #c62828; margin: 1.2em 0; }
+.lscc-title { margin: 0 0 .5em; }
+.lscc-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.lscc-card { border: 1px solid rgba(128,128,128,.3); border-radius: 10px; padding: 14px 16px; text-align: center; }
+.lscc-card-value { font-size: 2.2em; font-weight: 700; line-height: 1.15; color: var(--lscc-accent); }
+.lscc-card-label { opacity: .75; font-size: .9em; }
+.lscc-card-sub { opacity: .6; font-size: .8em; margin-top: 2px; }
+.lscc-chart { width: 100%; height: auto; display: block; color: inherit; }
+.lscc-bar { fill: var(--lscc-accent); }
+.lscc-line { stroke: var(--lscc-accent); stroke-width: 3; stroke-linejoin: round; }
+.lscc-dot { fill: var(--lscc-accent); }
+.lscc-grid { stroke: currentColor; stroke-opacity: .15; }
+.lscc-axis { font-size: 11px; fill: currentColor; opacity: .7; }
+.lscc-val { font-size: 11px; fill: currentColor; font-weight: 600; }
+.lscc-table { width: 100%; border-collapse: collapse; }
+.lscc-table th, .lscc-table td { padding: .4em .6em; border-bottom: 1px solid rgba(128,128,128,.25); text-align: left; }
+.lscc-table .lscc-num { text-align: right; font-variant-numeric: tabular-nums; }
+.lscc-stat { font-weight: 700; font-variant-numeric: tabular-nums; }
+.lscc-empty { opacity: .7; font-style: italic; }
+/* admin */
+.lscc-admin .lscc-box { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 12px 16px; margin: 16px 0; max-width: 1000px; }
+.lscc-admin .lscc-box h2 { margin-top: 0; }
+.lscc-admin .lscc-health-ok { border-left: 4px solid #2f7d32; }
+.lscc-admin .lscc-health-stale, .lscc-admin .lscc-health-never { border-left: 4px solid #dba617; }
+.lscc-admin code.lscc-secret { display: inline-block; padding: 4px 8px; user-select: all; word-break: break-all; }
+.lscc-admin form.lscc-inline { display: inline; }
+.lscc-admin .lscc-cards { max-width: 1000px; }
