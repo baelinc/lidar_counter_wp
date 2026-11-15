@@ -2,7 +2,7 @@
 Tags: christmas lights, counter, statistics, shortcode, falcon player
 Requires at least: 5.3
 Requires PHP: 7.2
-Stable tag: 1.3.0
+Stable tag: 1.3.1
 License: GPLv2 or later
 
 Receives nightly car counts from the FPP "Car Counter" plugin (Falcon Player) and shows them on your site with shortcodes and charts.
@@ -25,18 +25,23 @@ Uploads are authenticated with an HMAC‑SHA256 signature of the request using a
 4. Add a shortcode to any page, e.g. `We've welcomed [car_counter] cars!`
 
 == Shortcodes ==
-`[car_counter]` – season total as a plain number. Attributes:
-* `stat` – total (default), tonight, last_night, best_night, best_night_date, average, nights, busiest_hour, updated, date (with `date="2026-12-24"`)
-* `label`, `prefix`, `suffix` – text around the number; `format="raw"` removes thousands separators
-* `live="true"` – refresh total / tonight / last_night / nights every minute on the visitor's screen
-* `since`, `until` – YYYY-MM-DD, override the season dates
+Single numbers – `[car_counter stat="..."]`:
+* `[car_counter]` – cars so far (default)
+* `[car_counter stat="tonight"]` – cars tonight
+* `[car_counter stat="last_night"]` – cars last night
+* `[car_counter stat="best_night"]` and `stat="best_night_date"` – best night's cars / date
+* `[car_counter stat="average"]` – average per night
+* `[car_counter stat="nights"]` – nights open
+* `[car_counter stat="busiest_hour"]` – busiest hour of the evening
+* `[car_counter stat="updated"]` – time of the last upload
+* `[car_counter stat="date" date="2026-12-24"]` – one specific night
+Options: `label`, `prefix`, `suffix`, `format="raw"`, `live="true"` (refreshes total / tonight / last_night / nights every minute).
 
-`[car_counter_stats cards="total,nights,average,best_night" title="By the numbers"]` – grid of cards (any stat except `date`).
+Cards – `[car_counter_stats]` shows the full set. Choose cards with `cards="tonight,last_night,busiest_hour"` (total, tonight, last_night, best_night, average, nights, busiest_hour, updated). `hero="false"` makes the first card normal size; `title="By the numbers"` adds a heading.
 
-`[car_counter_chart days="14" type="bar|line" height="260" title=""]` – cars per night.
-`[car_counter_chart view="hourly"]` – which hours of the evening are busiest.
+Charts – `[car_counter_chart]` (bar, last 14 nights), `[car_counter_chart days="30" type="line" height="260" title=""]`, `[car_counter_chart view="hourly"]`.
 
-`[car_counter_table limit="14" order="desc"]` – table of nights.
+Table – `[car_counter_table]`, `[car_counter_table limit="30" order="asc"]`.
 
 All shortcodes accept `since` and `until`. Change the chart colour under Settings, or override CSS variable `--lscc-accent`.
 
@@ -62,6 +67,8 @@ Your Pi re-sends its last few nights on every upload, so deleted nights are reme
 Data is kept unless you tick "On uninstall" in Settings.
 
 == Changelog ==
+= 1.3.1 =
+* Settings page now has a complete, grouped shortcode list with Copy buttons.
 = 1.3.0 =
 * New card design: icons, a large "Cars so far" hero card with a trend line, tonight progress bar vs your best night, up/down vs average badge, live indicator, count-up animation. Works on dark and light themes.
 * Warns admins when saved nights fall outside the Season dates (the usual reason cards show 0).

@@ -13,11 +13,11 @@ charts and an admin dashboard.
 ## Shortcodes
 | Shortcode | Shows |
 |---|---|
-| `[car_counter]` | one number – `stat="total\|tonight\|last_night\|best_night\|best_night_date\|average\|nights\|busiest_hour\|updated\|date"`, plus `label`, `prefix`, `suffix`, `format="raw"`, `live="true"` |
-| `[car_counter_stats cards="total,nights,average,best_night"]` | grid of number cards |
-| `[car_counter_chart days="14" type="bar\|line"]` | cars per night (SVG) |
+| `[car_counter]` | cars so far. Other values: `stat="tonight"`, `last_night`, `best_night`, `best_night_date`, `average`, `nights`, `busiest_hour`, `updated`, `date` (with `date="2026-12-24"`). Options: `label`, `prefix`, `suffix`, `format="raw"`, `live="true"` |
+| `[car_counter_stats]` | designed cards. Choose with `cards="tonight,last_night,busiest_hour"`; `hero="false"`, `title="…"` |
+| `[car_counter_chart]` | bar chart of recent nights; `days="30" type="line" height="260"` |
 | `[car_counter_chart view="hourly"]` | busiest hours of the evening |
-| `[car_counter_table limit="14" order="desc"]` | table of nights |
+| `[car_counter_table limit="30" order="asc"]` | table of nights |
 
 Every shortcode accepts `since="YYYY-MM-DD"` and `until="YYYY-MM-DD"`. See `readme.txt` for the REST API and FAQ.
 

@@ -317,21 +317,57 @@ class LSCC_Admin {
 		echo '</div>';
 
 		// Shortcode help
-		echo '<div class="lscc-box"><h2>' . esc_html__( '4. Shortcodes', 'light-show-car-counter' ) . '</h2><table class="widefat striped"><tbody>';
-		$help = array(
-			'[car_counter]'                                   => __( 'Season total as a plain number you can use inside a sentence: "We have welcomed [car_counter] cars!"', 'light-show-car-counter' ),
-			'[car_counter stat="tonight" live="true"]'        => __( 'Tonight\'s count, refreshing on the visitor\'s screen. Stats: total, tonight, last_night, best_night, best_night_date, average, nights, busiest_hour, updated, date (with date="2026-12-24").', 'light-show-car-counter' ),
-			'[car_counter label="Cars:" suffix=" so far"]'    => __( 'Add a label, prefix or suffix. format="raw" removes thousands separators.', 'light-show-car-counter' ),
-			'[car_counter_stats cards="total,nights,average,best_night"]' => __( 'A grid of number cards. Cards: any stat above except date.', 'light-show-car-counter' ),
-			'[car_counter_chart days="14"]'                   => __( 'Bar chart of recent nights. Options: type="line", height="300", title="…".', 'light-show-car-counter' ),
-			'[car_counter_chart view="hourly"]'               => __( 'Which hours of the evening are busiest across the season.', 'light-show-car-counter' ),
-			'[car_counter_table limit="14" order="desc"]'     => __( 'Table of nightly totals.', 'light-show-car-counter' ),
-			'since="2026-11-20" until="2026-12-31"'           => __( 'Any shortcode accepts since / until (YYYY-MM-DD) to override the season dates.', 'light-show-car-counter' ),
+		echo '<div class="lscc-box"><h2>' . esc_html__( '4. Shortcodes', 'light-show-car-counter' ) . '</h2>'
+			. '<p class="description">' . esc_html__( 'Paste any of these into a page, post or widget. Press Copy to copy one.', 'light-show-car-counter' ) . '</p>';
+		$groups = array(
+			__( 'Single numbers (use inside a sentence or a heading)', 'light-show-car-counter' ) => array(
+				'[car_counter]'                          => __( 'Cars so far this season', 'light-show-car-counter' ),
+				'[car_counter stat="tonight"]'           => __( 'Cars tonight', 'light-show-car-counter' ),
+				'[car_counter stat="last_night"]'        => __( 'Cars last night', 'light-show-car-counter' ),
+				'[car_counter stat="best_night"]'        => __( 'Cars on the best night', 'light-show-car-counter' ),
+				'[car_counter stat="best_night_date"]'   => __( 'Date of the best night', 'light-show-car-counter' ),
+				'[car_counter stat="average"]'           => __( 'Average cars per night', 'light-show-car-counter' ),
+				'[car_counter stat="nights"]'            => __( 'Number of nights open', 'light-show-car-counter' ),
+				'[car_counter stat="busiest_hour"]'      => __( 'Busiest hour of the evening', 'light-show-car-counter' ),
+				'[car_counter stat="updated"]'           => __( 'When the last upload arrived', 'light-show-car-counter' ),
+				'[car_counter stat="date" date="2026-12-24"]' => __( 'Cars on one specific night', 'light-show-car-counter' ),
+			),
+			__( 'Single number options', 'light-show-car-counter' ) => array(
+				'[car_counter stat="tonight" live="true"]' => __( 'Refreshes itself every minute (works for total, tonight, last_night, nights). Needs "Live numbers" turned on above.', 'light-show-car-counter' ),
+				'[car_counter label="Cars tonight:" stat="tonight"]' => __( 'Add a label. Also: prefix="…" and suffix="…".', 'light-show-car-counter' ),
+				'[car_counter format="raw"]'             => __( 'No thousands separator (1234 instead of 1,234)', 'light-show-car-counter' ),
+			),
+			__( 'Cards', 'light-show-car-counter' ) => array(
+				'[car_counter_stats]'                    => __( 'The full set: big "Cars so far" card with trend line, tonight, last night, best night, average, busiest hour', 'light-show-car-counter' ),
+				'[car_counter_stats cards="tonight,last_night,busiest_hour"]' => __( 'Choose your own cards, in order. Available: total, tonight, last_night, best_night, average, nights, busiest_hour, updated.', 'light-show-car-counter' ),
+				'[car_counter_stats hero="false"]'       => __( 'Same cards, but the "Cars so far" card is a normal size (no trend line)', 'light-show-car-counter' ),
+				'[car_counter_stats title="By the numbers"]' => __( 'Add a heading above the cards', 'light-show-car-counter' ),
+			),
+			__( 'Charts', 'light-show-car-counter' ) => array(
+				'[car_counter_chart]'                    => __( 'Bar chart of the last 14 nights', 'light-show-car-counter' ),
+				'[car_counter_chart days="30" type="line"]' => __( 'Line chart, any number of nights (up to 120). Also: height="300", title="…".', 'light-show-car-counter' ),
+				'[car_counter_chart view="hourly"]'      => __( 'Which hours of the evening are busiest across the season', 'light-show-car-counter' ),
+			),
+			__( 'Table', 'light-show-car-counter' ) => array(
+				'[car_counter_table]'                    => __( 'Table of nightly totals (newest first)', 'light-show-car-counter' ),
+				'[car_counter_table limit="30" order="asc"]' => __( 'Choose how many nights and the order (asc = oldest first)', 'light-show-car-counter' ),
+			),
+			__( 'Any shortcode', 'light-show-car-counter' ) => array(
+				'since="2026-11-26" until="2026-12-31"'  => __( 'Add to any shortcode above to use these dates instead of your Season dates, e.g. [car_counter_stats since="2026-12-01"]', 'light-show-car-counter' ),
+			),
 		);
-		foreach ( $help as $code => $desc ) {
-			echo '<tr><td><code>' . esc_html( $code ) . '</code></td><td>' . esc_html( $desc ) . '</td></tr>';
+		echo '<table class="widefat striped"><tbody>';
+		foreach ( $groups as $title => $rows ) {
+			echo '<tr><th colspan="3" style="background:#f0f0f1">' . esc_html( $title ) . '</th></tr>';
+			foreach ( $rows as $code => $desc ) {
+				echo '<tr><td style="white-space:nowrap"><code>' . esc_html( $code ) . '</code></td><td>' . esc_html( $desc ) . '</td><td>'
+					. ( 0 === strpos( $code, '[' ) ? '<button type="button" class="button button-small lscc-copy" data-code="' . esc_attr( $code ) . '">' . esc_html__( 'Copy', 'light-show-car-counter' ) . '</button>' : '' )
+					. '</td></tr>';
+			}
 		}
-		echo '</tbody></table></div></div>';
+		echo '</tbody></table>';
+		echo '<script>document.querySelectorAll(".lscc-copy").forEach(function(b){b.addEventListener("click",function(){var t=b.getAttribute("data-code"),d=function(){b.textContent="Copied";setTimeout(function(){b.textContent="Copy"},1500)};if(navigator.clipboard){navigator.clipboard.writeText(t).then(d)}else{var a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();document.execCommand("copy");document.body.removeChild(a);d()}})})</script>';
+		echo '</div></div>';
 	}
 
 	private static function row_input( $label, $name, $value, $type, $desc ) {
