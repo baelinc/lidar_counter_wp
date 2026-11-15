@@ -83,9 +83,21 @@ class LSCC_Render {
 		if ( ! $days ) {
 			return '<p class="lscc-empty">' . esc_html__( 'No data yet.', 'light-show-car-counter' ) . '</p>';
 		}
-		$html  = '<table class="lscc-table"><thead><tr><th>' . esc_html__( 'Night', 'light-show-car-counter' ) . '</th><th class="lscc-num">' . esc_html__( 'Cars', 'light-show-car-counter' ) . '</th></tr></thead><tbody>';
+		$people = false;
 		foreach ( $days as $d ) {
-			$html .= '<tr><td>' . esc_html( LSCC_Settings::format_date( $d['date'] ) ) . '</td><td class="lscc-num">' . esc_html( number_format_i18n( $d['total'] ) ) . '</td></tr>';
+			if ( ! empty( $d['people'] ) ) {
+				$people = true;
+				break;
+			}
+		}
+		if ( isset( $o['people'] ) && false === $o['people'] ) {
+			$people = false;
+		}
+		$html  = '<table class="lscc-table"><thead><tr><th>' . esc_html__( 'Night', 'light-show-car-counter' ) . '</th><th class="lscc-num">' . esc_html__( 'Cars', 'light-show-car-counter' ) . '</th>'
+			. ( $people ? '<th class="lscc-num">' . esc_html__( 'People (est.)', 'light-show-car-counter' ) . '</th>' : '' ) . '</tr></thead><tbody>';
+		foreach ( $days as $d ) {
+			$html .= '<tr><td>' . esc_html( LSCC_Settings::format_date( $d['date'] ) ) . '</td><td class="lscc-num">' . esc_html( number_format_i18n( $d['total'] ) ) . '</td>'
+				. ( $people ? '<td class="lscc-num">' . ( $d['people'] > 0 ? esc_html( number_format_i18n( $d['people'] ) ) : '&mdash;' ) . '</td>' : '' ) . '</tr>';
 		}
 		return $html . '</tbody></table>';
 	}
@@ -99,6 +111,7 @@ class LSCC_Render {
 			'star'     => '<path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.8 6.8 19.6l1-5.8L3.5 9.7l5.9-.9z"/>',
 			'bars'     => '<path d="M5 20V11M12 20V5M19 20v-7"/>',
 			'clock'    => '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/>',
+			'people'   => '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.4-3.4 2.7-5.2 5.5-5.2s5.1 1.8 5.5 5.2"/><circle cx="17" cy="9" r="2.4"/><path d="M16 13.9c2.6.2 4.2 1.8 4.5 4.6"/>',
 			'sync'     => '<path d="M20 11a8 8 0 0 0-14-4L4 9M4 13a8 8 0 0 0 14 4l2-2M4 4v5h5M20 20v-5h-5"/>',
 		);
 		if ( ! isset( $paths[ $key ] ) ) {

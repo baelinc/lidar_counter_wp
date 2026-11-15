@@ -32,3 +32,6 @@ The plugin checks this repository for a newer `Version:` in `light-show-car-coun
 
 ## Cards
 `[car_counter_stats]` shows designed cards: a large **Cars so far** card with a trend line, **Tonight** with a progress bar against your best night (and a Live dot while the Pi is uploading), **Last night** with an up/down badge versus the average, plus best night, average and busiest hour. Options: `cards="total,tonight,last_night,best_night,average,busiest_hour,nights"`, `hero="true"` adds the big first card when you pick your own list. Cards only count nights inside the Season dates in Settings; admins see a note when saved nights fall outside them.
+
+## People (BaldrickSignals)
+If the FPP plugin is set up with a BaldrickSignals crowd board, each night's **estimated people** and **biggest crowd** are stored next to the car count (cars are never changed). Extra stats: `[car_counter stat="people"]`, `people_tonight`, `people_last_night`, `people_peak`, `people_per_car`; chart `[car_counter_chart metric="people"]`; the default `[car_counter_stats]` adds People tonight / People so far automatically when data exists. A night can also be edited by hand on the Nights page.

@@ -125,7 +125,11 @@ class LSCC_Admin {
 
 		$cards = '';
 		$opts  = array( 'hero' => true, 'spark' => LSCC_Shortcodes::recent_totals( (string) LSCC_Settings::get( 'season_start' ), (string) LSCC_Settings::get( 'season_end' ) ) );
-		foreach ( array( 'total', 'tonight', 'last_night', 'nights', 'average', 'best_night', 'busiest_hour' ) as $name ) {
+		$names = array( 'total', 'tonight', 'last_night', 'nights', 'average', 'best_night', 'busiest_hour' );
+		if ( $s['people'] > 0 ) {
+			$names = array_merge( $names, array( 'people_tonight', 'people', 'people_peak', 'people_per_car' ) );
+		}
+		foreach ( $names as $name ) {
 			$cards .= LSCC_Shortcodes::stat_card( $name, $s, $opts );
 		}
 		echo LSCC_Render::wrap( '<div class="lscc-cards">' . $cards . '</div>' );
@@ -152,6 +156,8 @@ class LSCC_Admin {
 		echo '<input type="hidden" name="action" value="lscc_save_day"><table class="form-table"><tbody>';
 		echo '<tr><th><label for="lscc-date">' . esc_html__( 'Night', 'light-show-car-counter' ) . '</label></th><td><input type="date" id="lscc-date" name="date" required value="' . esc_attr( $editing ? $editing['date'] : '' ) . '"' . ( $editing ? ' readonly' : '' ) . '></td></tr>';
 		echo '<tr><th><label for="lscc-total">' . esc_html__( 'Cars', 'light-show-car-counter' ) . '</label></th><td><input type="number" min="0" id="lscc-total" name="total" required value="' . esc_attr( $editing ? $editing['total'] : '' ) . '"></td></tr>';
+		echo '<tr><th><label for="lscc-people">' . esc_html__( 'People (est.)', 'light-show-car-counter' ) . '</label></th><td><input type="number" min="0" id="lscc-people" name="people" value="' . esc_attr( $editing && $editing['people'] ? $editing['people'] : '' ) . '"> <span class="description">' . esc_html__( 'Optional – estimated visitors from a BaldrickSignals board. Leave empty to keep what is stored.', 'light-show-car-counter' ) . '</span></td></tr>';
+		echo '<tr><th><label for="lscc-peak">' . esc_html__( 'Biggest crowd', 'light-show-car-counter' ) . '</label></th><td><input type="number" min="0" id="lscc-peak" name="people_peak" value="' . esc_attr( $editing && $editing['people_peak'] ? $editing['people_peak'] : '' ) . '"> <span class="description">' . esc_html__( 'Optional – most people at once.', 'light-show-car-counter' ) . '</span></td></tr>';
 		echo '<tr><th>' . esc_html__( 'Protect', 'light-show-car-counter' ) . '</th><td><label><input type="checkbox" name="locked" value="1" checked> ' . esc_html__( 'Lock this night so uploads from the Pi cannot overwrite it', 'light-show-car-counter' ) . '</label></td></tr>';
 		echo '</tbody></table><p><button class="button button-primary">' . esc_html__( 'Save night', 'light-show-car-counter' ) . '</button>';
 		if ( $editing ) {
@@ -177,11 +183,11 @@ class LSCC_Admin {
 			wp_nonce_field( 'lscc_delete_selected' );
 			echo '<input type="hidden" name="action" value="lscc_delete_selected"><button class="button">' . esc_html__( 'Delete selected nights', 'light-show-car-counter' ) . '</button> '
 				. '<span class="description">' . esc_html__( 'Deleted nights are ignored if the Pi uploads them again.', 'light-show-car-counter' ) . '</span></form>';
-			echo '<table class="widefat striped" style="margin-top:8px"><thead><tr><td class="check-column"><input type="checkbox" id="lscc-all" aria-label="' . esc_attr__( 'Select all', 'light-show-car-counter' ) . '"></td><th>' . esc_html__( 'Night', 'light-show-car-counter' ) . '</th><th>' . esc_html__( 'Cars', 'light-show-car-counter' ) . '</th><th>' . esc_html__( 'Off-hours', 'light-show-car-counter' ) . '</th><th>' . esc_html__( 'Source', 'light-show-car-counter' ) . '</th><th>' . esc_html__( 'Updated (UTC)', 'light-show-car-counter' ) . '</th><th></th></tr></thead><tbody>';
+			echo '<table class="widefat striped" style="margin-top:8px"><thead><tr><td class="check-column"><input type="checkbox" id="lscc-all" aria-label="' . esc_attr__( 'Select all', 'light-show-car-counter' ) . '"></td><th>' . esc_html__( 'Night', 'light-show-car-counter' ) . '</th><th>' . esc_html__( 'Cars', 'light-show-car-counter' ) . '</th><th>' . esc_html__( 'Off-hours', 'light-show-car-counter' ) . '</th><th>' . esc_html__( 'People (est.)', 'light-show-car-counter' ) . '</th><th>' . esc_html__( 'Source', 'light-show-car-counter' ) . '</th><th>' . esc_html__( 'Updated (UTC)', 'light-show-car-counter' ) . '</th><th></th></tr></thead><tbody>';
 			foreach ( $days as $d ) {
 				echo '<tr><th scope="row" class="check-column"><input type="checkbox" name="dates[]" value="' . esc_attr( $d['date'] ) . '" form="lscc-bulk"></th>';
 				echo '<td>' . esc_html( LSCC_Settings::format_date( $d['date'] ) . ' (' . $d['date'] . ')' ) . '</td>';
-				echo '<td>' . esc_html( number_format_i18n( $d['total'] ) ) . '</td><td>' . esc_html( number_format_i18n( $d['offhours'] ) ) . '</td>';
+				echo '<td>' . esc_html( number_format_i18n( $d['total'] ) ) . '</td><td>' . esc_html( number_format_i18n( $d['offhours'] ) ) . '</td><td>' . ( $d['people'] > 0 ? esc_html( number_format_i18n( $d['people'] ) . ' (peak ' . number_format_i18n( $d['people_peak'] ) . ')' ) : '&mdash;' ) . '</td>';
 				echo '<td>' . esc_html( $d['source'] ) . ( $d['locked'] ? ' &#128274;' : '' ) . '</td><td>' . esc_html( $d['updated_at'] ) . '</td><td>';
 				echo '<a class="button button-small" href="' . esc_url( add_query_arg( array( 'page' => 'lscc', 'edit' => $d['date'] ), admin_url( 'admin.php' ) ) ) . '">' . esc_html__( 'Edit', 'light-show-car-counter' ) . '</a> ';
 				self::row_form( 'lscc_lock_day', $d['date'], $d['locked'] ? __( 'Unlock', 'light-show-car-counter' ) : __( 'Lock', 'light-show-car-counter' ), array( 'lock' => $d['locked'] ? '0' : '1' ) );
@@ -330,6 +336,11 @@ class LSCC_Admin {
 				'[car_counter stat="nights"]'            => __( 'Number of nights open', 'light-show-car-counter' ),
 				'[car_counter stat="busiest_hour"]'      => __( 'Busiest hour of the evening', 'light-show-car-counter' ),
 				'[car_counter stat="updated"]'           => __( 'When the last upload arrived', 'light-show-car-counter' ),
+				'[car_counter stat="people"]'            => __( 'People so far (estimated, from a BaldrickSignals board)', 'light-show-car-counter' ),
+				'[car_counter stat="people_tonight"]'    => __( 'People tonight (estimated)', 'light-show-car-counter' ),
+				'[car_counter stat="people_last_night"]' => __( 'People last night (estimated)', 'light-show-car-counter' ),
+				'[car_counter stat="people_peak"]'       => __( 'Biggest crowd at one time', 'light-show-car-counter' ),
+				'[car_counter stat="people_per_car"]'    => __( 'Estimated people per car', 'light-show-car-counter' ),
 				'[car_counter stat="date" date="2026-12-24"]' => __( 'Cars on one specific night', 'light-show-car-counter' ),
 			),
 			__( 'Single number options', 'light-show-car-counter' ) => array(
@@ -347,6 +358,7 @@ class LSCC_Admin {
 			__( 'Charts', 'light-show-car-counter' ) => array(
 				'[car_counter_chart]'                    => __( 'Bar chart of the last 14 nights', 'light-show-car-counter' ),
 				'[car_counter_chart days="30" type="line"]' => __( 'Line chart, any number of nights (up to 120). Also: height="300", title="…".', 'light-show-car-counter' ),
+				'[car_counter_chart metric="people"]'    => __( 'Bar chart of estimated people per night instead of cars', 'light-show-car-counter' ),
 				'[car_counter_chart view="hourly"]'      => __( 'Which hours of the evening are busiest across the season', 'light-show-car-counter' ),
 			),
 			__( 'Table', 'light-show-car-counter' ) => array(
@@ -430,6 +442,8 @@ class LSCC_Admin {
 			'date'     => $date,
 			'total'    => isset( $_POST['total'] ) ? max( 0, (int) $_POST['total'] ) : 0,
 			'offhours' => $existing ? $existing['offhours'] : 0,
+			'people'   => ( isset( $_POST['people'] ) && '' !== trim( (string) $_POST['people'] ) ) ? max( 0, (int) $_POST['people'] ) : null,
+			'people_peak' => ( isset( $_POST['people_peak'] ) && '' !== trim( (string) $_POST['people_peak'] ) ) ? max( 0, (int) $_POST['people_peak'] ) : null,
 			'hours'    => $existing ? $existing['hours'] : array(),
 			'first_ts' => $existing ? $existing['first_ts'] : 0,
 			'last_ts'  => $existing ? $existing['last_ts'] : 0,
@@ -566,13 +580,13 @@ class LSCC_Admin {
 		header( 'Content-Type: text/csv; charset=utf-8' );
 		header( 'Content-Disposition: attachment; filename="car-counts-' . gmdate( 'Y-m-d' ) . '.csv"' );
 		$out  = fopen( 'php://output', 'w' );
-		$head = array( 'date', 'cars', 'offhours_detections', 'source', 'locked' );
+		$head = array( 'date', 'cars', 'offhours_detections', 'people_est', 'people_peak', 'source', 'locked' );
 		for ( $h = 0; $h < 24; $h++ ) {
 			$head[] = sprintf( 'h%02d', $h );
 		}
 		fputcsv( $out, $head, ',', '"', '\\' );
 		foreach ( LSCC_DB::get_days() as $d ) {
-			fputcsv( $out, array_merge( array( $d['date'], $d['total'], $d['offhours'], $d['source'], (int) $d['locked'] ), $d['hours'] ), ',', '"', '\\' );
+			fputcsv( $out, array_merge( array( $d['date'], $d['total'], $d['offhours'], $d['people'], $d['people_peak'], $d['source'], (int) $d['locked'] ), $d['hours'] ), ',', '"', '\\' );
 		}
 		fclose( $out );
 		exit;

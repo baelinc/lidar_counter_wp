@@ -87,6 +87,8 @@ class LSCC_REST {
 			'date'     => (string) $raw['date'],
 			'total'    => isset( $raw['total'] ) ? max( 0, (int) $raw['total'] ) : 0,
 			'offhours' => isset( $raw['offhours'] ) ? max( 0, (int) $raw['offhours'] ) : 0,
+			'people'   => isset( $raw['people'] ) && is_numeric( $raw['people'] ) ? max( 0, (int) $raw['people'] ) : null,
+			'people_peak' => isset( $raw['people_peak'] ) && is_numeric( $raw['people_peak'] ) ? max( 0, (int) $raw['people_peak'] ) : null,
 			'hours'    => $hours,
 			'first_ts' => isset( $raw['first_ts'] ) ? (int) $raw['first_ts'] : 0,
 			'last_ts'  => isset( $raw['last_ts'] ) ? (int) $raw['last_ts'] : 0,
@@ -173,6 +175,9 @@ class LSCC_REST {
 			'tonight'    => $s['tonight'],
 			'last_night' => $s['last_night'] ? $s['last_night']['total'] : 0,
 			'nights'     => $s['nights'],
+			'people'     => $s['people'],
+			'people_tonight' => $s['people_tonight'],
+			'people_last_night' => $s['people_last_night'] ? $s['people_last_night']['total'] : 0,
 			'updated'    => $s['updated'],
 		) );
 		$response->header( 'Cache-Control', 'public, max-age=30' );

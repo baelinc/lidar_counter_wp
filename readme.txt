@@ -2,7 +2,7 @@
 Tags: christmas lights, counter, statistics, shortcode, falcon player
 Requires at least: 5.3
 Requires PHP: 7.2
-Stable tag: 1.3.2
+Stable tag: 1.4.0
 License: GPLv2 or later
 
 Receives nightly car counts from the FPP "Car Counter" plugin (Falcon Player) and shows them on your site with shortcodes and charts.
@@ -35,11 +35,12 @@ Single numbers – `[car_counter stat="..."]`:
 * `[car_counter stat="busiest_hour"]` – busiest hour of the evening
 * `[car_counter stat="updated"]` – time of the last upload
 * `[car_counter stat="date" date="2026-12-24"]` – one specific night
+* `[car_counter stat="people"]`, `people_tonight`, `people_last_night`, `people_peak` (biggest crowd), `people_per_car` – estimated people from a BaldrickSignals board (only meaningful if you use one)
 Options: `label`, `prefix`, `suffix`, `format="raw"`, `live="true"`, `style="card"` (show the number as a designed card) (refreshes total / tonight / last_night / nights every minute).
 
-Cards – `[car_counter_stats]` shows the full set. Choose cards with `cards="tonight,last_night,busiest_hour"` (total, tonight, last_night, best_night, average, nights, busiest_hour, updated). the big "Cars so far" card is used for the full set only – with your own `cards=` list you get an even grid (add `hero="true"` for the big card); `title="By the numbers"` adds a heading.
+Cards – `[car_counter_stats]` shows the full set. Choose cards with `cards="tonight,last_night,busiest_hour"` (total, tonight, last_night, best_night, average, nights, busiest_hour, updated, people, people_tonight, people_last_night, people_peak, people_per_car). When people data exists the default set also shows People tonight and People so far. the big "Cars so far" card is used for the full set only – with your own `cards=` list you get an even grid (add `hero="true"` for the big card); `title="By the numbers"` adds a heading.
 
-Charts – `[car_counter_chart]` (bar, last 14 nights), `[car_counter_chart days="30" type="line" height="260" title=""]`, `[car_counter_chart view="hourly"]`.
+Charts – `[car_counter_chart]` (bar, last 14 nights), `[car_counter_chart days="30" type="line" height="260" title=""]`, `[car_counter_chart view="hourly"]`, `[car_counter_chart metric="people"]` (estimated people per night).
 
 Table – `[car_counter_table]`, `[car_counter_table limit="30" order="asc"]`.
 
@@ -67,6 +68,8 @@ Your Pi re-sends its last few nights on every upload, so deleted nights are reme
 Data is kept unless you tick "On uninstall" in Settings.
 
 == Changelog ==
+= 1.4.0 =
+* People (estimated) from a BaldrickSignals board connected to the FPP plugin: stored separately from cars, with new stats (people, people_tonight, people_last_night, people_peak, people_per_car), people cards, a People column in tables, and metric="people" for charts.
 = 1.3.2 =
 * Custom card lists (cards="...") now get an even grid, not the big hero card, so older shortcodes look right. New style="card" for single-number shortcodes.
 = 1.3.1 =

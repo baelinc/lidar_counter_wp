@@ -9,7 +9,7 @@ defined( 'ABSPATH' ) || exit;
  */
 class LSCC_Shortcodes {
 
-	const LIVE_STATS = array( 'total', 'tonight', 'last_night', 'nights' );
+	const LIVE_STATS = array( 'total', 'tonight', 'last_night', 'nights', 'people', 'people_tonight', 'people_last_night' );
 
 	public static function init() {
 		add_shortcode( 'car_counter', array( __CLASS__, 'stat' ) );
@@ -53,6 +53,17 @@ class LSCC_Shortcodes {
 				return array( __( 'Busiest hour', 'light-show-car-counter' ), null === $s['busiest_hour'] ? $dash : LSCC_Settings::format_hour( $s['busiest_hour'] ), null, '' );
 			case 'updated':
 				return array( __( 'Last updated', 'light-show-car-counter' ), $s['updated'] ? wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $s['updated'] ) : $dash, null, '' );
+			case 'people':
+				return array( __( 'People so far (est.)', 'light-show-car-counter' ), number_format_i18n( $s['people'] ), $s['people'], '' );
+			case 'people_tonight':
+				return array( __( 'People tonight (est.)', 'light-show-car-counter' ), number_format_i18n( $s['people_tonight'] ), $s['people_tonight'], '' );
+			case 'people_last_night':
+				$n = $s['people_last_night'] ? $s['people_last_night']['total'] : 0;
+				return array( __( 'People last night (est.)', 'light-show-car-counter' ), $s['people_last_night'] ? number_format_i18n( $n ) : $dash, $n, $s['people_last_night'] ? LSCC_Settings::format_date( $s['people_last_night']['date'] ) : '' );
+			case 'people_peak':
+				return array( __( 'Biggest crowd', 'light-show-car-counter' ), $s['people_peak'] ? number_format_i18n( $s['people_peak']['total'] ) : $dash, $s['people_peak'] ? $s['people_peak']['total'] : 0, $s['people_peak'] ? LSCC_Settings::format_date( $s['people_peak']['date'] ) : '' );
+			case 'people_per_car':
+				return array( __( 'People per car', 'light-show-car-counter' ), null === $s['people_per_car'] ? $dash : number_format_i18n( $s['people_per_car'], 1 ), $s['people_per_car'], __( 'estimated', 'light-show-car-counter' ) );
 			case 'date':
 				$d = ( isset( $atts['date'] ) && LSCC_Settings::valid_date( $atts['date'] ) ) ? LSCC_DB::get_day( $atts['date'] ) : null;
 				$n = $d ? $d['total'] : 0;
@@ -67,12 +78,12 @@ class LSCC_Shortcodes {
 	public static function stat_card( $name, array $s, array $opts = array() ) {
 		$d    = self::stat_data( $name, $s, isset( $opts['atts'] ) ? $opts['atts'] : array() );
 		$o    = array();
-		$icons = array( 'total' => 'car', 'tonight' => 'moon', 'last_night' => 'calendar', 'best_night' => 'star', 'average' => 'bars', 'nights' => 'calendar', 'busiest_hour' => 'clock', 'updated' => 'sync' );
+		$icons = array( 'total' => 'car', 'tonight' => 'moon', 'last_night' => 'calendar', 'best_night' => 'star', 'average' => 'bars', 'nights' => 'calendar', 'busiest_hour' => 'clock', 'updated' => 'sync', 'people' => 'people', 'people_tonight' => 'people', 'people_last_night' => 'people', 'people_peak' => 'people', 'people_per_car' => 'people' );
 		if ( isset( $icons[ $name ] ) ) {
 			$o['icon'] = $icons[ $name ];
 		}
 		$sub = $d[3];
-		if ( null !== $d[2] && in_array( $name, array( 'total', 'tonight', 'last_night', 'nights', 'average', 'best_night' ), true ) ) {
+		if ( null !== $d[2] && in_array( $name, array( 'total', 'tonight', 'last_night', 'nights', 'average', 'best_night', 'people', 'people_tonight', 'people_last_night', 'people_peak' ), true ) ) {
 			$o['count'] = (int) $d[2];
 		}
 		if ( 'total' === $name ) {
@@ -89,6 +100,17 @@ class LSCC_Shortcodes {
 				$o['progress'] = $s['tonight'] / $s['best']['total'];
 				/* translators: %d: percent */
 				$sub = $s['tonight'] >= $s['best']['total'] && $s['tonight'] > 0 ? __( 'A new best night!', 'light-show-car-counter' ) : sprintf( __( '%d%% of the best night', 'light-show-car-counter' ), min( 100, round( 100 * $s['tonight'] / $s['best']['total'] ) ) );
+			}
+			if ( $s['updated'] && ( time() - $s['updated'] ) < 15 * MINUTE_IN_SECONDS ) {
+				$o['live'] = true;
+			}
+		} elseif ( 'people' === $name && $s['people_nights'] ) {
+			/* translators: %s: number of nights */
+			$sub = sprintf( _n( 'across %s night', 'across %s nights', $s['people_nights'], 'light-show-car-counter' ), number_format_i18n( $s['people_nights'] ) );
+		} elseif ( 'people_tonight' === $name ) {
+			if ( $s['people_tonight_peak'] ) {
+				/* translators: %s: number */
+				$sub = sprintf( __( 'Peak at once: %s', 'light-show-car-counter' ), number_format_i18n( $s['people_tonight_peak'] ) );
 			}
 			if ( $s['updated'] && ( time() - $s['updated'] ) < 15 * MINUTE_IN_SECONDS ) {
 				$o['live'] = true;
@@ -123,7 +145,7 @@ class LSCC_Shortcodes {
 	}
 
 	private static function stat_names() {
-		return array( 'total', 'tonight', 'last_night', 'best_night', 'best_night_date', 'average', 'nights', 'busiest_hour', 'updated', 'date' );
+		return array( 'total', 'tonight', 'last_night', 'best_night', 'best_night_date', 'average', 'nights', 'busiest_hour', 'updated', 'date', 'people', 'people_tonight', 'people_last_night', 'people_peak', 'people_per_car' );
 	}
 
 	/* ---------------- [car_counter] ---------------- */
@@ -190,6 +212,9 @@ class LSCC_Shortcodes {
 		list( $since, $until ) = self::range( $atts );
 		$s     = LSCC_DB::summary( $since, $until );
 		$hero  = '' === $atts['hero'] ? ! $custom_cards : self::truthy( $atts['hero'] );
+		if ( ! $custom_cards && $s['people'] > 0 ) {   // crowd numbers exist: show them next to the car cards, clearly labelled
+			$atts['cards'] .= ',people_tonight,people';
+		}
 		$opts  = array( 'hero' => $hero, 'spark' => $hero ? self::recent_totals( null === $since ? (string) LSCC_Settings::get( 'season_start' ) : $since, null === $until ? (string) LSCC_Settings::get( 'season_end' ) : $until ) : array() );
 		$cards = '';
 		foreach ( array_slice( array_map( 'sanitize_key', explode( ',', $atts['cards'] ) ), 0, 12 ) as $name ) {
@@ -205,7 +230,7 @@ class LSCC_Shortcodes {
 	/* ---------------- [car_counter_chart] ---------------- */
 	public static function chart( $atts ) {
 		$atts = shortcode_atts( array(
-			'view' => 'daily', 'type' => 'bar', 'days' => 14, 'height' => 260, 'title' => '', 'since' => '', 'until' => '',
+			'view' => 'daily', 'type' => 'bar', 'days' => 14, 'height' => 260, 'title' => '', 'since' => '', 'until' => '', 'metric' => 'cars',
 		), $atts, 'car_counter_chart' );
 		self::assets();
 		list( $since, $until ) = self::range( $atts );
@@ -237,11 +262,12 @@ class LSCC_Shortcodes {
 				'order' => 'DESC', 'limit' => $limit, 'only_nonzero' => true,
 			) ) );
 			$labels = array(); $values = array();
+			$people = ( 'people' === strtolower( $atts['metric'] ) );
 			foreach ( $days as $d ) {
 				$labels[] = LSCC_Settings::format_date( $d['date'], 'M j' );
-				$values[] = $d['total'];
+				$values[] = $people ? $d['people'] : $d['total'];
 			}
-			$title = '' !== $atts['title'] ? $atts['title'] : __( 'Cars per night', 'light-show-car-counter' );
+			$title = '' !== $atts['title'] ? $atts['title'] : ( $people ? __( 'People per night (estimated)', 'light-show-car-counter' ) : __( 'Cars per night', 'light-show-car-counter' ) );
 		}
 		$out = '<h3 class="lscc-title">' . esc_html( $title ) . '</h3>' . LSCC_Render::chart( $labels, $values, array( 'type' => $type, 'height' => $atts['height'], 'title' => $title ) );
 		return LSCC_Render::wrap( $out, 'lscc-chartbox' );
@@ -249,7 +275,7 @@ class LSCC_Shortcodes {
 
 	/* ---------------- [car_counter_table] ---------------- */
 	public static function table( $atts ) {
-		$atts = shortcode_atts( array( 'limit' => 14, 'order' => 'desc', 'since' => '', 'until' => '', 'title' => '' ), $atts, 'car_counter_table' );
+		$atts = shortcode_atts( array( 'limit' => 14, 'order' => 'desc', 'since' => '', 'until' => '', 'title' => '', 'people' => 'auto' ), $atts, 'car_counter_table' );
 		self::assets();
 		list( $since, $until ) = self::range( $atts );
 		$days = LSCC_DB::get_days( array(
@@ -259,6 +285,6 @@ class LSCC_Shortcodes {
 			'limit' => max( 1, min( 400, (int) $atts['limit'] ) ), 'only_nonzero' => true,
 		) );
 		$title = '' !== $atts['title'] ? '<h3 class="lscc-title">' . esc_html( $atts['title'] ) . '</h3>' : '';
-		return LSCC_Render::wrap( $title . LSCC_Render::table( $days ), 'lscc-tablebox' );
+		return LSCC_Render::wrap( $title . LSCC_Render::table( $days, 'auto' === strtolower( $atts['people'] ) ? array() : array( 'people' => self::truthy( $atts['people'] ) ) ), 'lscc-tablebox' );
 	}
 }

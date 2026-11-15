@@ -4,7 +4,7 @@ defined( 'ABSPATH' ) || exit;
 /** Storage: one row per show night. */
 class LSCC_DB {
 
-	const DB_VERSION = '1';
+	const DB_VERSION = '2';
 
 	public static function table() {
 		global $wpdb;
@@ -25,6 +25,8 @@ class LSCC_DB {
   show_date date NOT NULL,
   total int(10) unsigned NOT NULL DEFAULT 0,
   offhours int(10) unsigned NOT NULL DEFAULT 0,
+  people int(10) unsigned NOT NULL DEFAULT 0,
+  people_peak int(10) unsigned NOT NULL DEFAULT 0,
   hours text NULL,
   first_ts int(10) unsigned NULL,
   last_ts int(10) unsigned NULL,
@@ -82,10 +84,15 @@ class LSCC_DB {
 		if ( $existing && $existing['locked'] && ! $force ) {
 			return 'locked';
 		}
+		// Crowd (phone) numbers are optional: an upload without them keeps what is already stored.
+		$people = ( isset( $day['people'] ) && null !== $day['people'] ) ? max( 0, min( 10000000, (int) $day['people'] ) ) : ( $existing ? $existing['people'] : 0 );
+		$peak   = ( isset( $day['people_peak'] ) && null !== $day['people_peak'] ) ? max( 0, min( 10000000, (int) $day['people_peak'] ) ) : ( $existing ? $existing['people_peak'] : 0 );
 		$row = array(
 			'show_date'  => $day['date'],
 			'total'      => max( 0, min( 10000000, (int) $day['total'] ) ),
 			'offhours'   => max( 0, min( 10000000, (int) ( isset( $day['offhours'] ) ? $day['offhours'] : 0 ) ) ),
+			'people'     => $people,
+			'people_peak' => $peak,
 			'hours'      => wp_json_encode( self::clean_hours( isset( $day['hours'] ) ? $day['hours'] : array() ) ),
 			'first_ts'   => ! empty( $day['first_ts'] ) ? (int) $day['first_ts'] : null,
 			'last_ts'    => ! empty( $day['last_ts'] ) ? (int) $day['last_ts'] : null,
@@ -93,7 +100,7 @@ class LSCC_DB {
 			'source'     => $source,
 			'updated_at' => current_time( 'mysql', true ),
 		);
-		$wpdb->replace( self::table(), $row, array( '%s', '%d', '%d', '%s', '%d', '%d', '%d', '%s', '%s' ) );
+		$wpdb->replace( self::table(), $row, array( '%s', '%d', '%d', '%d', '%d', '%s', '%d', '%d', '%d', '%s', '%s' ) );
 		return $existing ? 'updated' : 'inserted';
 	}
 
@@ -190,6 +197,8 @@ class LSCC_DB {
 			'date'       => $r['show_date'],
 			'total'      => (int) $r['total'],
 			'offhours'   => (int) $r['offhours'],
+			'people'     => isset( $r['people'] ) ? (int) $r['people'] : 0,
+			'people_peak' => isset( $r['people_peak'] ) ? (int) $r['people_peak'] : 0,
 			'hours'      => self::clean_hours( $hours ),
 			'first_ts'   => $r['first_ts'] ? (int) $r['first_ts'] : null,
 			'last_ts'    => $r['last_ts'] ? (int) $r['last_ts'] : null,
@@ -214,7 +223,7 @@ class LSCC_DB {
 			$params[] = $args['until'];
 		}
 		if ( $args['only_nonzero'] ) {
-			$where[] = 'total > 0';
+			$where[] = '( total > 0 OR people > 0 )';
 		}
 		$sql = 'SELECT * FROM ' . self::table() . ' WHERE ' . implode( ' AND ', $where ) . ' ORDER BY show_date ' . ( 'DESC' === strtoupper( $args['order'] ) ? 'DESC' : 'ASC' );
 		if ( (int) $args['limit'] > 0 ) {
@@ -255,7 +264,7 @@ class LSCC_DB {
 			$until = (string) LSCC_Settings::get( 'season_end' );
 		}
 		$tonight_date = LSCC_Settings::tonight_date();
-		$key          = 'lscc_sum_' . md5( implode( '|', array( $since, $until, $tonight_date, self::cache_version(), (int) $custom, LSCC_Settings::get( 'start_offset' ) ) ) );
+		$key          = 'lscc_sum_' . md5( implode( '|', array( self::DB_VERSION, $since, $until, $tonight_date, self::cache_version(), (int) $custom, LSCC_Settings::get( 'start_offset' ) ) ) );
 		$cached       = get_transient( $key );
 		if ( is_array( $cached ) ) {
 			return $cached;
@@ -269,6 +278,8 @@ class LSCC_DB {
 		$latest = null;
 		$tonight_total = 0;
 		$last_night    = null;
+		$people_total = 0; $people_nights = 0; $people_best = null; $people_tonight = 0; $people_tonight_peak = 0; $people_last = null;
+		$pc_people = 0; $pc_cars = 0;
 		foreach ( $days as $d ) {
 			$total += $d['total'];
 			if ( $d['total'] > 0 ) {
@@ -281,8 +292,24 @@ class LSCC_DB {
 				$hourly[ $h ] += $d['hours'][ $h ];
 			}
 			$latest = $d;
+			if ( $d['people'] > 0 ) {
+				$people_total += $d['people'];
+				$people_nights++;
+				if ( null === $people_best || $d['people_peak'] > $people_best['total'] ) {
+					$people_best = array( 'date' => $d['date'], 'total' => $d['people_peak'] );
+				}
+				if ( $d['total'] > 0 ) {
+					$pc_people += $d['people'];
+					$pc_cars   += $d['total'];
+				}
+				if ( $d['date'] < $tonight_date ) {
+					$people_last = array( 'date' => $d['date'], 'total' => $d['people'] );
+				}
+			}
 			if ( $d['date'] === $tonight_date ) {
-				$tonight_total = $d['total'];
+				$tonight_total       = $d['total'];
+				$people_tonight      = $d['people'];
+				$people_tonight_peak = $d['people_peak'];
 			}
 			if ( $d['date'] < $tonight_date && $d['total'] > 0 ) {
 				$last_night = array( 'date' => $d['date'], 'total' => $d['total'] );
@@ -308,6 +335,13 @@ class LSCC_DB {
 			'tonight'      => $tonight_total,
 			'last_night'   => $last_night,
 			'updated'      => isset( $sync['ts'] ) ? (int) $sync['ts'] : 0,
+			'people'              => $people_total,
+			'people_nights'       => $people_nights,
+			'people_peak'         => $people_best,
+			'people_tonight'      => $people_tonight,
+			'people_tonight_peak' => $people_tonight_peak,
+			'people_last_night'   => $people_last,
+			'people_per_car'      => $pc_cars > 0 ? round( $pc_people / $pc_cars, 1 ) : null,
 		);
 		set_transient( $key, $summary, 10 * MINUTE_IN_SECONDS );
 		return $summary;
