@@ -2,7 +2,7 @@
 Tags: christmas lights, counter, statistics, shortcode, falcon player
 Requires at least: 5.3
 Requires PHP: 7.2
-Stable tag: 1.1.0
+Stable tag: 1.2.0
 License: GPLv2 or later
 
 Receives nightly car counts from the FPP "Car Counter" plugin (Falcon Player) and shows them on your site with shortcodes and charts.
@@ -53,6 +53,8 @@ The secret doesn't match (regenerating it invalidates the old one) or the Pi's c
 Some security plugins or hosts disable the REST API for anonymous users. Allow `/lscc/v1/` (the FPP plugin also tries `?rest_route=`).
 = I corrected a night but the Pi overwrote it =
 Edit it under Car Counter → Nights and keep "Lock" ticked.
+= Updates =
+The plugin checks its GitHub repository (baelinc/lidar_counter_wp) for a newer version. When one exists you see a banner with an Update now button and the usual update notice on the Plugins page. Settings → Plugin updates has a "Check for updates now" button. To release an update, raise the Version in light-show-car-counter.php and push to main.
 = Deleting data =
 Car Counter → Nights: delete one night, tick several and "Delete selected", or delete a date range. Settings → Upload log: remove a log entry or delete the nights a specific upload brought in. "Reset all data" (type RESET) wipes every night and the log but keeps your settings and secret.
 Your Pi re-sends its last few nights on every upload, so deleted nights are remembered as "ignored" and skipped (restore them any time). After a reset you choose: accept tonight and ignore older, start tomorrow, or accept everything again.
@@ -60,6 +62,8 @@ Your Pi re-sends its last few nights on every upload, so deleted nights are reme
 Data is kept unless you tick "On uninstall" in Settings.
 
 == Changelog ==
+= 1.2.0 =
+* Built-in updater: checks GitHub, shows an "Update now" banner and the normal WordPress update link, plus a "Check for updates now" button in Settings.
 = 1.1.0 =
 * Delete a night, several nights, a date range, or a whole upload; reset all data; ignored-nights list with restore; upload log management.
 = 1.0.0 =

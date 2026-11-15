@@ -21,6 +21,7 @@ class LSCC_Admin {
 		add_action( 'admin_post_lscc_clear_log', array( __CLASS__, 'handle_clear_log' ) );
 		add_action( 'admin_post_lscc_unblock', array( __CLASS__, 'handle_unblock' ) );
 		add_action( 'admin_post_lscc_clear_floor', array( __CLASS__, 'handle_clear_floor' ) );
+		add_action( 'admin_post_lscc_check_update', array( __CLASS__, 'handle_check_update' ) );
 		add_action( 'admin_post_lscc_reset_all', array( __CLASS__, 'handle_reset_all' ) );
 	}
 
@@ -67,6 +68,9 @@ class LSCC_Admin {
 			'restored'     => array( 'success', __( 'Restored. The next upload from the Pi can bring that night back.', 'light-show-car-counter' ) ),
 			'floor_clear'  => array( 'success', __( 'Now accepting all nights again. The next upload re-sends the Pi\'s recent history.', 'light-show-car-counter' ) ),
 			'reset_done'   => array( 'success', __( 'All data was deleted.', 'light-show-car-counter' ) ),
+			'upd_none'     => array( 'success', __( 'You are running the latest version.', 'light-show-car-counter' ) ),
+			'upd_found'    => array( 'warning', __( 'A new version is available – use the Update now button.', 'light-show-car-counter' ) ),
+			'upd_error'    => array( 'error', __( 'Could not check GitHub for updates. Try again in a few minutes.', 'light-show-car-counter' ) ),
 			'reset_bad'    => array( 'error', __( 'Nothing was deleted: you must type RESET exactly to confirm.', 'light-show-car-counter' ) ),
 		);
 		$key = isset( $_GET['lscc_msg'] ) ? sanitize_key( wp_unslash( $_GET['lscc_msg'] ) ) : '';
@@ -114,6 +118,7 @@ class LSCC_Admin {
 
 		echo '<div class="wrap lscc-admin"><h1>' . esc_html__( 'Car Counter', 'light-show-car-counter' ) . '</h1>';
 		self::notice();
+		LSCC_Updater::banner();
 		echo self::health_box();
 
 		$cards = '';
@@ -235,7 +240,22 @@ class LSCC_Admin {
 		$o = LSCC_Settings::all();
 		echo '<div class="wrap lscc-admin"><h1>' . esc_html__( 'Car Counter – Connection & Settings', 'light-show-car-counter' ) . '</h1>';
 		self::notice();
+		LSCC_Updater::banner();
 		echo self::health_box();
+
+		// Plugin updates
+		$info = LSCC_Updater::latest();
+		echo '<div class="lscc-box"><h2>' . esc_html__( 'Plugin updates', 'light-show-car-counter' ) . '</h2><p>'
+			. esc_html( sprintf( /* translators: %s: version */ __( 'Installed version: %s', 'light-show-car-counter' ), LSCC_VERSION ) );
+		if ( $info['version'] ) {
+			echo ' · ' . esc_html( sprintf( /* translators: %s: version */ __( 'Latest on GitHub: %s', 'light-show-car-counter' ), $info['version'] ) );
+		}
+		if ( $info['checked'] ) {
+			echo ' · ' . esc_html( sprintf( /* translators: %s: time ago */ __( 'checked %s ago', 'light-show-car-counter' ), human_time_diff( $info['checked'] ) ) );
+		}
+		echo '</p>';
+		self::row_form( 'lscc_check_update', '', __( 'Check for updates now', 'light-show-car-counter' ) );
+		echo '<p class="description">' . esc_html__( 'WordPress also checks automatically a few times a day and shows "Update now" on the Plugins page.', 'light-show-car-counter' ) . '</p></div>';
 
 		// Connection
 		echo '<div class="lscc-box"><h2>' . esc_html__( '1. Connect your FPP', 'light-show-car-counter' ) . '</h2>';
@@ -460,6 +480,17 @@ class LSCC_Admin {
 		self::guard( 'lscc_clear_floor' );
 		LSCC_Settings::set_floor( '' );
 		self::back( 'lscc', 'floor_clear' );
+	}
+
+	public static function handle_check_update() {
+		self::guard( 'lscc_check_update' );
+		if ( ! current_user_can( 'update_plugins' ) ) {
+			wp_die( esc_html__( 'You are not allowed to do that.', 'light-show-car-counter' ), 403 );
+		}
+		delete_site_transient( 'update_plugins' );   // make WordPress re-read too
+		$info = LSCC_Updater::latest( true );
+		$msg  = $info['error'] ? 'upd_error' : ( LSCC_Updater::update_available() ? 'upd_found' : 'upd_none' );
+		self::back( 'lscc-settings', $msg );
 	}
 
 	public static function handle_reset_all() {

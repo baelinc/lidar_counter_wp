@@ -26,3 +26,6 @@ Requires WordPress 5.3+ and PHP 7.2+. License: GPL-2.0-or-later.
 ## Deleting data
 Under **Car Counter → Nights** you can delete a single night, tick several and delete them, delete a date range, or **Reset all data** (type `RESET`). **Settings → Upload log** lets you delete the nights a given upload brought in.
 Because the Pi re-sends its recent history with each upload, deleted nights are kept on an *ignored* list so they don't reappear (restore any time). A reset lets you choose whether to accept tonight, start tomorrow, or accept everything again. Settings and the shared secret are never touched.
+
+## Updates
+The plugin checks this repository for a newer `Version:` in `light-show-car-counter.php` and shows an **Update now** button (banner on the plugin pages and the normal Plugins-page notice). **Settings → Plugin updates** has *Check for updates now*. To publish an update, bump the version and push to `main`.
