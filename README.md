@@ -13,8 +13,8 @@ charts and an admin dashboard.
 ## Shortcodes
 | Shortcode | Shows |
 |---|---|
-| `[car_counter]` | cars so far. Other values: `stat="tonight"`, `last_night`, `best_night`, `best_night_date`, `average`, `nights`, `busiest_hour`, `updated`, `date` (with `date="2026-12-24"`). Options: `label`, `prefix`, `suffix`, `format="raw"`, `live="true"` |
-| `[car_counter_stats]` | designed cards. Choose with `cards="tonight,last_night,busiest_hour"`; `hero="false"`, `title="…"` |
+| `[car_counter]` | cars so far. Other values: `stat="tonight"`, `last_night`, `best_night`, `best_night_date`, `average`, `nights`, `busiest_hour`, `updated`, `date` (with `date="2026-12-24"`). Options: `label`, `prefix`, `suffix`, `format="raw"`, `live="true"`, `style="card"` |
+| `[car_counter_stats]` | designed cards. Choose with `cards="tonight,last_night,busiest_hour"`; `hero="true"` (big first card; default only for the full set), `title="…"` |
 | `[car_counter_chart]` | bar chart of recent nights; `days="30" type="line" height="260"` |
 | `[car_counter_chart view="hourly"]` | busiest hours of the evening |
 | `[car_counter_table limit="30" order="asc"]` | table of nights |
@@ -31,4 +31,4 @@ Because the Pi re-sends its recent history with each upload, deleted nights are 
 The plugin checks this repository for a newer `Version:` in `light-show-car-counter.php` and shows an **Update now** button (banner on the plugin pages and the normal Plugins-page notice). **Settings → Plugin updates** has *Check for updates now*. To publish an update, bump the version and push to `main`.
 
 ## Cards
-`[car_counter_stats]` shows designed cards: a large **Cars so far** card with a trend line, **Tonight** with a progress bar against your best night (and a Live dot while the Pi is uploading), **Last night** with an up/down badge versus the average, plus best night, average and busiest hour. Options: `cards="total,tonight,last_night,best_night,average,busiest_hour,nights"`, `hero="false"` for a plain grid. Cards only count nights inside the Season dates in Settings; admins see a note when saved nights fall outside them.
+`[car_counter_stats]` shows designed cards: a large **Cars so far** card with a trend line, **Tonight** with a progress bar against your best night (and a Live dot while the Pi is uploading), **Last night** with an up/down badge versus the average, plus best night, average and busiest hour. Options: `cards="total,tonight,last_night,best_night,average,busiest_hour,nights"`, `hero="true"` adds the big first card when you pick your own list. Cards only count nights inside the Season dates in Settings; admins see a note when saved nights fall outside them.

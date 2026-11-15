@@ -27,6 +27,8 @@
 .lscc-spark-area { fill: var(--lscc-accent); opacity: .28; }
 .lscc-spark-line { stroke: var(--lscc-accent); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; filter: brightness(1.25); }
 .lscc-spark-dot { fill: #fff; stroke: var(--lscc-accent); stroke-width: 2; }
+.lscc.lscc-single { display: inline-block; vertical-align: top; margin: .4em .8em .4em 0; width: 210px; max-width: 100%; }
+.lscc-single .lscc-cards { grid-template-columns: 1fr; }
 .lscc-admin-note { margin: 10px 0 0; padding: 8px 12px; border-left: 3px solid #dba617; background: rgba(219,166,23,.14); font-size: .85em; border-radius: 4px; }
 @media (max-width: 520px) { .lscc-card-hero { grid-column: 1 / -1; } .lscc-card-value { font-size: 2.1em; } .lscc-card-hero .lscc-card-value { font-size: 3em; } }
 @media (prefers-reduced-motion: reduce) { .lscc-card, .lscc-progress span { transition: none; } .lscc-live i { animation: none; } }

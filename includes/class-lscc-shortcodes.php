@@ -65,7 +65,7 @@ class LSCC_Shortcodes {
 
 	/** Build one designed card for a stat (icon, trend, progress, sparkline where it makes sense). */
 	public static function stat_card( $name, array $s, array $opts = array() ) {
-		$d    = self::stat_data( $name, $s );
+		$d    = self::stat_data( $name, $s, isset( $opts['atts'] ) ? $opts['atts'] : array() );
 		$o    = array();
 		$icons = array( 'total' => 'car', 'tonight' => 'moon', 'last_night' => 'calendar', 'best_night' => 'star', 'average' => 'bars', 'nights' => 'calendar', 'busiest_hour' => 'clock', 'updated' => 'sync' );
 		if ( isset( $icons[ $name ] ) ) {
@@ -130,7 +130,7 @@ class LSCC_Shortcodes {
 	public static function stat( $atts ) {
 		$atts = shortcode_atts( array(
 			'stat' => 'total', 'label' => '', 'prefix' => '', 'suffix' => '', 'format' => 'number',
-			'live' => 'false', 'since' => '', 'until' => '', 'date' => '', 'class' => '',
+			'live' => 'false', 'since' => '', 'until' => '', 'date' => '', 'class' => '', 'style' => '',
 		), $atts, 'car_counter' );
 		self::assets();
 
@@ -141,6 +141,10 @@ class LSCC_Shortcodes {
 		list( $since, $until ) = self::range( $atts );
 		$s    = LSCC_DB::summary( $since, $until );
 		$data = self::stat_data( $stat, $s, $atts );
+		if ( 'card' === strtolower( trim( $atts['style'] ) ) ) {
+			self::enqueue_cards();
+			return LSCC_Render::wrap( '<div class="lscc-cards">' . self::stat_card( $stat, $s, array( 'atts' => $atts ) ) . '</div>', 'lscc-stats lscc-single' );
+		}
 		$text = ( 'raw' === $atts['format'] && null !== $data[2] ) ? (string) $data[2] : $data[1];
 
 		$live_attr = '';
@@ -174,14 +178,18 @@ class LSCC_Shortcodes {
 
 	/* ---------------- [car_counter_stats] ---------------- */
 	public static function stats( $atts ) {
+		$raw_atts = is_array( $atts ) ? $atts : array();
 		$atts = shortcode_atts( array(
-			'cards' => 'total,tonight,last_night,best_night,average,busiest_hour', 'title' => '', 'since' => '', 'until' => '', 'hero' => 'true',
+			'cards' => 'total,tonight,last_night,best_night,average,busiest_hour', 'title' => '', 'since' => '', 'until' => '', 'hero' => '',
 		), $atts, 'car_counter_stats' );
+		// The big "Cars so far" card is only the default for the full set; if you pick your own cards you get a plain, even grid
+		// unless you ask for hero="true".
+		$custom_cards = isset( $raw_atts['cards'] ) && '' !== trim( (string) $raw_atts['cards'] );
 		self::assets();
 		self::enqueue_cards();
 		list( $since, $until ) = self::range( $atts );
 		$s     = LSCC_DB::summary( $since, $until );
-		$hero  = self::truthy( $atts['hero'] );
+		$hero  = '' === $atts['hero'] ? ! $custom_cards : self::truthy( $atts['hero'] );
 		$opts  = array( 'hero' => $hero, 'spark' => $hero ? self::recent_totals( null === $since ? (string) LSCC_Settings::get( 'season_start' ) : $since, null === $until ? (string) LSCC_Settings::get( 'season_end' ) : $until ) : array() );
 		$cards = '';
 		foreach ( array_slice( array_map( 'sanitize_key', explode( ',', $atts['cards'] ) ), 0, 12 ) as $name ) {

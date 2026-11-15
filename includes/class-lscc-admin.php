@@ -335,12 +335,13 @@ class LSCC_Admin {
 			__( 'Single number options', 'light-show-car-counter' ) => array(
 				'[car_counter stat="tonight" live="true"]' => __( 'Refreshes itself every minute (works for total, tonight, last_night, nights). Needs "Live numbers" turned on above.', 'light-show-car-counter' ),
 				'[car_counter label="Cars tonight:" stat="tonight"]' => __( 'Add a label. Also: prefix="…" and suffix="…".', 'light-show-car-counter' ),
+				'[car_counter stat="tonight" style="card"]' => __( 'Show a single number as a designed card instead of plain text. Works with any stat; put several in a row and they sit side by side.', 'light-show-car-counter' ),
 				'[car_counter format="raw"]'             => __( 'No thousands separator (1234 instead of 1,234)', 'light-show-car-counter' ),
 			),
 			__( 'Cards', 'light-show-car-counter' ) => array(
 				'[car_counter_stats]'                    => __( 'The full set: big "Cars so far" card with trend line, tonight, last night, best night, average, busiest hour', 'light-show-car-counter' ),
 				'[car_counter_stats cards="tonight,last_night,busiest_hour"]' => __( 'Choose your own cards, in order. Available: total, tonight, last_night, best_night, average, nights, busiest_hour, updated.', 'light-show-car-counter' ),
-				'[car_counter_stats hero="false"]'       => __( 'Same cards, but the "Cars so far" card is a normal size (no trend line)', 'light-show-car-counter' ),
+				'[car_counter_stats hero="true" cards="total,nights,average,best_night"]' => __( 'The big "Cars so far" card with trend line is only used for the full set. If you choose your own cards you get an even grid; add hero="true" to get the big card anyway.', 'light-show-car-counter' ),
 				'[car_counter_stats title="By the numbers"]' => __( 'Add a heading above the cards', 'light-show-car-counter' ),
 			),
 			__( 'Charts', 'light-show-car-counter' ) => array(
