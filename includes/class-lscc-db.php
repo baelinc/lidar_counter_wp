@@ -103,6 +103,80 @@ class LSCC_DB {
 		self::bump_cache();
 	}
 
+	/* ---------------- ignored nights ----------------
+	 * The Pi re-sends its last few nights with every upload, so a deleted night would simply come
+	 * back. Deleted nights are remembered here and skipped on ingest until restored.
+	 */
+	public static function blocked() {
+		$b = get_option( 'lscc_blocked', array() );
+		return is_array( $b ) ? array_values( $b ) : array();
+	}
+
+	public static function block( array $dates ) {
+		$all = array_unique( array_merge( self::blocked(), array_filter( $dates, array( 'LSCC_Settings', 'valid_date' ) ) ) );
+		sort( $all );
+		update_option( 'lscc_blocked', array_slice( $all, -2000 ), false );
+	}
+
+	public static function unblock( $date ) {
+		update_option( 'lscc_blocked', array_values( array_diff( self::blocked(), array( $date ) ) ), false );
+	}
+
+	/** True if an upload for this night must be ignored (deleted night, or older than the reset cut-off). */
+	public static function is_ignored( $date ) {
+		$floor = (string) LSCC_Settings::get( 'data_floor' );
+		return ( '' !== $floor && $date < $floor ) || in_array( $date, self::blocked(), true );
+	}
+
+	/** Delete nights and keep ignoring them. Returns how many stored nights were removed. */
+	public static function delete_days( array $dates, $block = true ) {
+		$removed = 0;
+		foreach ( array_unique( $dates ) as $date ) {
+			if ( ! LSCC_Settings::valid_date( (string) $date ) ) {
+				continue;
+			}
+			if ( self::get_day( $date ) ) {
+				self::delete_day( $date );
+				$removed++;
+			}
+		}
+		if ( $block ) {
+			self::block( $dates );
+		}
+		self::bump_cache();
+		return $removed;
+	}
+
+	public static function dates_in_range( $from, $to ) {
+		$rows = self::get_days( array( 'since' => $from, 'until' => $to ) );
+		return array_column( $rows, 'date' );
+	}
+
+	/**
+	 * Wipe every stored night, the upload log and the ignore list.
+	 * $restart: 'tonight' (accept tonight's upload but nothing older), 'tomorrow' (ignore tonight too)
+	 * or 'all' (accept whatever the Pi sends, including its old history).
+	 * Settings, the shared secret and the starting offset are kept.
+	 */
+	public static function reset_all( $restart = 'tonight' ) {
+		global $wpdb;
+		$wpdb->query( 'DELETE FROM ' . self::table() );
+		delete_option( 'lscc_last_sync' );
+		delete_option( 'lscc_sync_log' );
+		delete_option( 'lscc_blocked' );
+		$tonight = LSCC_Settings::tonight_date();
+		if ( 'tomorrow' === $restart ) {
+			$floor = gmdate( 'Y-m-d', strtotime( $tonight . ' 12:00:00 UTC' ) + DAY_IN_SECONDS );
+		} elseif ( 'all' === $restart ) {
+			$floor = '';
+		} else {
+			$floor = $tonight;
+		}
+		LSCC_Settings::set_floor( $floor );
+		self::bump_cache();
+		return $floor;
+	}
+
 	public static function set_lock( $date, $locked ) {
 		global $wpdb;
 		$wpdb->update( self::table(), array( 'locked' => $locked ? 1 : 0 ), array( 'show_date' => $date ), array( '%d' ), array( '%s' ) );

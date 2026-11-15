@@ -104,17 +104,24 @@ class LSCC_REST {
 		$received = 0;
 		$changed  = 0;
 		$locked   = 0;
+		$ignored  = 0;
+		$stored   = array();
 		foreach ( $data['days'] as $raw ) {
 			$day = self::clean_day( $raw );
 			if ( null === $day ) {
 				continue;
 			}
 			$received++;
+			if ( LSCC_DB::is_ignored( $day['date'] ) ) {   // deleted by the site owner, or older than a reset
+				$ignored++;
+				continue;
+			}
 			$result = LSCC_DB::upsert_day( $day, 'fpp' );
 			if ( 'locked' === $result ) {
 				$locked++;
 			} else {
 				$changed++;
+				$stored[] = $day['date'];
 			}
 		}
 		LSCC_DB::bump_cache();
@@ -125,6 +132,8 @@ class LSCC_REST {
 			'received' => $received,
 			'changed'  => $changed,
 			'locked'   => $locked,
+			'ignored'  => $ignored,
+			'dates'    => array_slice( $stored, 0, 60 ),
 			'version'  => isset( $data['plugin_version'] ) ? sanitize_text_field( (string) $data['plugin_version'] ) : '',
 			'show'     => isset( $data['show_name'] ) ? sanitize_text_field( (string) $data['show_name'] ) : '',
 			'ip'       => isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '',
@@ -146,6 +155,7 @@ class LSCC_REST {
 			'received'       => $received,
 			'updated'        => $changed,
 			'skipped_locked' => $locked,
+			'ignored'        => $ignored,
 			'season_total'   => $summary['total'],
 			'site'           => get_bloginfo( 'name' ),
 			'plugin_version' => LSCC_VERSION,

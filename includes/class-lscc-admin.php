@@ -14,6 +14,14 @@ class LSCC_Admin {
 		add_action( 'admin_post_lscc_delete_day', array( __CLASS__, 'handle_delete_day' ) );
 		add_action( 'admin_post_lscc_lock_day', array( __CLASS__, 'handle_lock_day' ) );
 		add_action( 'admin_post_lscc_export', array( __CLASS__, 'handle_export' ) );
+		add_action( 'admin_post_lscc_delete_selected', array( __CLASS__, 'handle_delete_selected' ) );
+		add_action( 'admin_post_lscc_delete_range', array( __CLASS__, 'handle_delete_range' ) );
+		add_action( 'admin_post_lscc_delete_upload', array( __CLASS__, 'handle_delete_upload' ) );
+		add_action( 'admin_post_lscc_remove_log', array( __CLASS__, 'handle_remove_log' ) );
+		add_action( 'admin_post_lscc_clear_log', array( __CLASS__, 'handle_clear_log' ) );
+		add_action( 'admin_post_lscc_unblock', array( __CLASS__, 'handle_unblock' ) );
+		add_action( 'admin_post_lscc_clear_floor', array( __CLASS__, 'handle_clear_floor' ) );
+		add_action( 'admin_post_lscc_reset_all', array( __CLASS__, 'handle_reset_all' ) );
 	}
 
 	public static function menu() {
@@ -51,10 +59,21 @@ class LSCC_Admin {
 			'locked'       => array( 'success', __( 'Night locked. Uploads from the Pi will not overwrite it.', 'light-show-car-counter' ) ),
 			'unlocked'     => array( 'success', __( 'Night unlocked. The next upload from the Pi may overwrite it.', 'light-show-car-counter' ) ),
 			'bad_date'     => array( 'error', __( 'That date is not valid (use YYYY-MM-DD).', 'light-show-car-counter' ) ),
+			/* translators: %d: number of nights */
+			'deleted'      => array( 'success', __( '%d night(s) deleted. They will be ignored if the Pi uploads them again – restore them under "Ignored nights" if you change your mind.', 'light-show-car-counter' ) ),
+			'nothing'      => array( 'warning', __( 'Nothing was selected, or no nights matched.', 'light-show-car-counter' ) ),
+			'bad_range'    => array( 'error', __( 'Enter a valid start and end date (start must not be after end).', 'light-show-car-counter' ) ),
+			'log_removed'  => array( 'success', __( 'Upload log updated.', 'light-show-car-counter' ) ),
+			'restored'     => array( 'success', __( 'Restored. The next upload from the Pi can bring that night back.', 'light-show-car-counter' ) ),
+			'floor_clear'  => array( 'success', __( 'Now accepting all nights again. The next upload re-sends the Pi\'s recent history.', 'light-show-car-counter' ) ),
+			'reset_done'   => array( 'success', __( 'All data was deleted.', 'light-show-car-counter' ) ),
+			'reset_bad'    => array( 'error', __( 'Nothing was deleted: you must type RESET exactly to confirm.', 'light-show-car-counter' ) ),
 		);
 		$key = isset( $_GET['lscc_msg'] ) ? sanitize_key( wp_unslash( $_GET['lscc_msg'] ) ) : '';
 		if ( isset( $messages[ $key ] ) ) {
-			printf( '<div class="notice notice-%s is-dismissible"><p>%s</p></div>', esc_attr( $messages[ $key ][0] ), esc_html( $messages[ $key ][1] ) );
+			$n    = isset( $_GET['lscc_n'] ) ? absint( $_GET['lscc_n'] ) : 0;
+			$text = false !== strpos( $messages[ $key ][1], '%d' ) ? sprintf( $messages[ $key ][1], $n ) : $messages[ $key ][1];
+			printf( '<div class="notice notice-%s is-dismissible"><p>%s</p></div>', esc_attr( $messages[ $key ][0] ), esc_html( $text ) );
 		}
 	}
 
@@ -127,25 +146,75 @@ class LSCC_Admin {
 		}
 		echo '</p></form></div>';
 
-		// Table
+		// Reset cut-off banner
+		$floor = (string) LSCC_Settings::get( 'data_floor' );
+		if ( '' !== $floor ) {
+			echo '<div class="lscc-box lscc-health-stale"><strong>' . esc_html__( 'Ignoring older uploads:', 'light-show-car-counter' ) . '</strong> '
+				. esc_html( sprintf( /* translators: %s: date */ __( 'nights before %s that the Pi sends are skipped (set by "Reset all data").', 'light-show-car-counter' ), $floor ) ) . ' ';
+			self::row_form( 'lscc_clear_floor', '', __( 'Accept all nights again', 'light-show-car-counter' ) );
+			echo '</div>';
+		}
+
+		// All nights (with bulk select)
 		echo '<div class="lscc-box"><h2>' . esc_html__( 'All nights', 'light-show-car-counter' ) . '</h2>';
 		if ( ! $days ) {
 			echo '<p>' . esc_html__( 'No nights recorded yet.', 'light-show-car-counter' ) . '</p>';
 		} else {
-			echo '<table class="widefat striped"><thead><tr><th>' . esc_html__( 'Night', 'light-show-car-counter' ) . '</th><th>' . esc_html__( 'Cars', 'light-show-car-counter' ) . '</th><th>' . esc_html__( 'Off-hours', 'light-show-car-counter' ) . '</th><th>' . esc_html__( 'Source', 'light-show-car-counter' ) . '</th><th>' . esc_html__( 'Updated (UTC)', 'light-show-car-counter' ) . '</th><th></th></tr></thead><tbody>';
+			echo '<form id="lscc-bulk" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" onsubmit="return confirm(' . esc_attr( wp_json_encode( __( 'Delete the selected nights?', 'light-show-car-counter' ) ) ) . ');">';
+			wp_nonce_field( 'lscc_delete_selected' );
+			echo '<input type="hidden" name="action" value="lscc_delete_selected"><button class="button">' . esc_html__( 'Delete selected nights', 'light-show-car-counter' ) . '</button> '
+				. '<span class="description">' . esc_html__( 'Deleted nights are ignored if the Pi uploads them again.', 'light-show-car-counter' ) . '</span></form>';
+			echo '<table class="widefat striped" style="margin-top:8px"><thead><tr><td class="check-column"><input type="checkbox" id="lscc-all" aria-label="' . esc_attr__( 'Select all', 'light-show-car-counter' ) . '"></td><th>' . esc_html__( 'Night', 'light-show-car-counter' ) . '</th><th>' . esc_html__( 'Cars', 'light-show-car-counter' ) . '</th><th>' . esc_html__( 'Off-hours', 'light-show-car-counter' ) . '</th><th>' . esc_html__( 'Source', 'light-show-car-counter' ) . '</th><th>' . esc_html__( 'Updated (UTC)', 'light-show-car-counter' ) . '</th><th></th></tr></thead><tbody>';
 			foreach ( $days as $d ) {
-				echo '<tr><td>' . esc_html( LSCC_Settings::format_date( $d['date'] ) . ' (' . $d['date'] . ')' ) . '</td>';
+				echo '<tr><th scope="row" class="check-column"><input type="checkbox" name="dates[]" value="' . esc_attr( $d['date'] ) . '" form="lscc-bulk"></th>';
+				echo '<td>' . esc_html( LSCC_Settings::format_date( $d['date'] ) . ' (' . $d['date'] . ')' ) . '</td>';
 				echo '<td>' . esc_html( number_format_i18n( $d['total'] ) ) . '</td><td>' . esc_html( number_format_i18n( $d['offhours'] ) ) . '</td>';
 				echo '<td>' . esc_html( $d['source'] ) . ( $d['locked'] ? ' &#128274;' : '' ) . '</td><td>' . esc_html( $d['updated_at'] ) . '</td><td>';
 				echo '<a class="button button-small" href="' . esc_url( add_query_arg( array( 'page' => 'lscc', 'edit' => $d['date'] ), admin_url( 'admin.php' ) ) ) . '">' . esc_html__( 'Edit', 'light-show-car-counter' ) . '</a> ';
 				self::row_form( 'lscc_lock_day', $d['date'], $d['locked'] ? __( 'Unlock', 'light-show-car-counter' ) : __( 'Lock', 'light-show-car-counter' ), array( 'lock' => $d['locked'] ? '0' : '1' ) );
-				self::row_form( 'lscc_delete_day', $d['date'], __( 'Delete', 'light-show-car-counter' ), array(), __( 'Delete this night? An FPP upload may bring it back.', 'light-show-car-counter' ) );
+				self::row_form( 'lscc_delete_day', $d['date'], __( 'Delete', 'light-show-car-counter' ), array(), __( 'Delete this night? It will be ignored if the Pi uploads it again.', 'light-show-car-counter' ) );
 				echo '</td></tr>';
 			}
 			echo '</tbody></table>';
+			echo '<script>document.getElementById("lscc-all").addEventListener("change",function(e){document.querySelectorAll("input[name=\'dates[]\']").forEach(function(c){c.checked=e.target.checked;});});</script>';
 		}
 		$export = wp_nonce_url( admin_url( 'admin-post.php?action=lscc_export' ), 'lscc_export' );
-		echo '<p><a class="button" href="' . esc_url( $export ) . '">' . esc_html__( 'Download CSV', 'light-show-car-counter' ) . '</a></p></div></div>';
+		echo '<p><a class="button" href="' . esc_url( $export ) . '">' . esc_html__( 'Download CSV', 'light-show-car-counter' ) . '</a></p></div>';
+
+		// Delete a range
+		echo '<div class="lscc-box"><h2>' . esc_html__( 'Delete a range of nights', 'light-show-car-counter' ) . '</h2>';
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" onsubmit="return confirm(' . esc_attr( wp_json_encode( __( 'Delete every night in this range?', 'light-show-car-counter' ) ) ) . ');">';
+		wp_nonce_field( 'lscc_delete_range' );
+		echo '<input type="hidden" name="action" value="lscc_delete_range">'
+			. '<label>' . esc_html__( 'From', 'light-show-car-counter' ) . ' <input type="date" name="from" required></label> '
+			. '<label>' . esc_html__( 'to', 'light-show-car-counter' ) . ' <input type="date" name="to" required></label> '
+			. '<button class="button">' . esc_html__( 'Delete range', 'light-show-car-counter' ) . '</button></form></div>';
+
+		// Ignored nights
+		$blocked = LSCC_DB::blocked();
+		if ( $blocked ) {
+			echo '<div class="lscc-box"><h2>' . esc_html__( 'Ignored nights', 'light-show-car-counter' ) . '</h2><p class="description">'
+				. esc_html__( 'You deleted these, so uploads for them are skipped. Restore one to let the Pi bring it back.', 'light-show-car-counter' ) . '</p>';
+			foreach ( array_reverse( $blocked ) as $date ) {
+				echo '<span style="display:inline-block;margin:0 12px 6px 0">' . esc_html( $date ) . ' ';
+				self::row_form( 'lscc_unblock', $date, __( 'Restore', 'light-show-car-counter' ) );
+				echo '</span>';
+			}
+			echo '</div>';
+		}
+
+		// Danger zone
+		echo '<div class="lscc-box" style="border-left:4px solid #c62828"><h2>' . esc_html__( 'Reset all data', 'light-show-car-counter' ) . '</h2>';
+		echo '<p>' . esc_html__( 'Deletes every night, the upload log and the ignored-nights list. Your settings and shared secret are kept. This cannot be undone.', 'light-show-car-counter' ) . '</p>';
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		wp_nonce_field( 'lscc_reset_all' );
+		echo '<input type="hidden" name="action" value="lscc_reset_all">';
+		echo '<p><strong>' . esc_html__( 'Your Pi keeps its own history and re-sends recent nights every upload. After the reset:', 'light-show-car-counter' ) . '</strong></p>';
+		echo '<p><label><input type="radio" name="restart" value="tonight" checked> ' . esc_html__( 'Accept tonight\'s upload, ignore anything older (recommended)', 'light-show-car-counter' ) . '</label><br>'
+			. '<label><input type="radio" name="restart" value="tomorrow"> ' . esc_html__( 'Ignore tonight too – start counting from tomorrow night', 'light-show-car-counter' ) . '</label><br>'
+			. '<label><input type="radio" name="restart" value="all"> ' . esc_html__( 'Accept everything the Pi sends again (its recent history will come back)', 'light-show-car-counter' ) . '</label></p>';
+		echo '<p><label>' . esc_html__( 'Type RESET to confirm:', 'light-show-car-counter' ) . ' <input type="text" name="confirm_text" autocomplete="off" size="10"></label> '
+			. '<button class="button" style="border-color:#c62828;color:#c62828">' . esc_html__( 'Delete all data', 'light-show-car-counter' ) . '</button></p></form></div></div>';
 	}
 
 	private static function row_form( $action, $date, $label, $extra = array(), $confirm = '' ) {
@@ -201,11 +270,21 @@ class LSCC_Admin {
 		if ( ! is_array( $log ) || ! $log ) {
 			echo '<p>' . esc_html__( 'None yet.', 'light-show-car-counter' ) . '</p>';
 		} else {
-			echo '<table class="widefat striped"><thead><tr><th>' . esc_html__( 'When', 'light-show-car-counter' ) . '</th><th>' . esc_html__( 'Nights received', 'light-show-car-counter' ) . '</th><th>' . esc_html__( 'Skipped (locked)', 'light-show-car-counter' ) . '</th><th>' . esc_html__( 'FPP plugin', 'light-show-car-counter' ) . '</th><th>IP</th></tr></thead><tbody>';
+			echo '<table class="widefat striped"><thead><tr><th>' . esc_html__( 'When', 'light-show-car-counter' ) . '</th><th>' . esc_html__( 'Nights received', 'light-show-car-counter' ) . '</th><th>' . esc_html__( 'Skipped (locked / ignored)', 'light-show-car-counter' ) . '</th><th>' . esc_html__( 'FPP plugin', 'light-show-car-counter' ) . '</th><th>IP</th><th></th></tr></thead><tbody>';
 			foreach ( $log as $row ) {
-				echo '<tr><td>' . esc_html( wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), (int) $row['ts'] ) ) . '</td><td>' . esc_html( (int) $row['received'] ) . '</td><td>' . esc_html( (int) $row['locked'] ) . '</td><td>' . esc_html( $row['version'] ) . '</td><td>' . esc_html( $row['ip'] ) . '</td></tr>';
+				$ts    = (int) $row['ts'];
+				$dates = isset( $row['dates'] ) && is_array( $row['dates'] ) ? $row['dates'] : array();
+				echo '<tr><td>' . esc_html( wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $ts ) ) . '</td><td>' . esc_html( (int) $row['received'] ) . '</td><td>' . esc_html( (int) $row['locked'] . ' / ' . ( isset( $row['ignored'] ) ? (int) $row['ignored'] : 0 ) ) . '</td><td>' . esc_html( $row['version'] ) . '</td><td>' . esc_html( $row['ip'] ) . '</td><td>';
+				if ( $dates ) {
+					self::row_form( 'lscc_delete_upload', '', __( 'Delete its nights', 'light-show-car-counter' ), array( 'ts' => $ts ), sprintf( /* translators: %d: number of nights */ __( 'Delete the %d night(s) this upload brought in? They will be ignored if uploaded again.', 'light-show-car-counter' ), count( $dates ) ) );
+				}
+				self::row_form( 'lscc_remove_log', '', __( 'Remove entry', 'light-show-car-counter' ), array( 'ts' => $ts ) );
+				echo '</td></tr>';
 			}
 			echo '</tbody></table>';
+			echo '<p>';
+			self::row_form( 'lscc_clear_log', '', __( 'Clear upload log', 'light-show-car-counter' ), array(), __( 'Clear the whole upload log? Stored nights are not affected.', 'light-show-car-counter' ) );
+			echo '</p>';
 		}
 		echo '</div>';
 
@@ -291,6 +370,7 @@ class LSCC_Admin {
 			'first_ts' => $existing ? $existing['first_ts'] : 0,
 			'last_ts'  => $existing ? $existing['last_ts'] : 0,
 		), 'manual', true, ! empty( $_POST['locked'] ) );
+		LSCC_DB::unblock( $date );   // adding a night by hand means you want it
 		LSCC_DB::bump_cache();
 		self::back( 'lscc', 'day_saved' );
 	}
@@ -298,10 +378,99 @@ class LSCC_Admin {
 	public static function handle_delete_day() {
 		self::guard( 'lscc_delete_day' );
 		$date = isset( $_POST['date'] ) ? sanitize_text_field( wp_unslash( $_POST['date'] ) ) : '';
-		if ( LSCC_Settings::valid_date( $date ) ) {
-			LSCC_DB::delete_day( $date );
+		$n    = LSCC_Settings::valid_date( $date ) ? LSCC_DB::delete_days( array( $date ) ) : 0;
+		self::back( 'lscc', 'deleted', array( 'lscc_n' => $n ) );
+	}
+
+	public static function handle_delete_selected() {
+		self::guard( 'lscc_delete_selected' );
+		$dates = isset( $_POST['dates'] ) && is_array( $_POST['dates'] ) ? array_slice( array_map( 'sanitize_text_field', wp_unslash( $_POST['dates'] ) ), 0, 500 ) : array();
+		$dates = array_filter( $dates, array( 'LSCC_Settings', 'valid_date' ) );
+		if ( ! $dates ) {
+			self::back( 'lscc', 'nothing' );
 		}
-		self::back( 'lscc', 'day_deleted' );
+		self::back( 'lscc', 'deleted', array( 'lscc_n' => LSCC_DB::delete_days( $dates ) ) );
+	}
+
+	public static function handle_delete_range() {
+		self::guard( 'lscc_delete_range' );
+		$from = isset( $_POST['from'] ) ? sanitize_text_field( wp_unslash( $_POST['from'] ) ) : '';
+		$to   = isset( $_POST['to'] ) ? sanitize_text_field( wp_unslash( $_POST['to'] ) ) : '';
+		if ( ! LSCC_Settings::valid_date( $from ) || ! LSCC_Settings::valid_date( $to ) || $from > $to ) {
+			self::back( 'lscc', 'bad_range' );
+		}
+		$dates = LSCC_DB::dates_in_range( $from, $to );
+		if ( ! $dates ) {
+			self::back( 'lscc', 'nothing' );
+		}
+		self::back( 'lscc', 'deleted', array( 'lscc_n' => LSCC_DB::delete_days( $dates ) ) );
+	}
+
+	private static function log_without( $ts ) {
+		$log = get_option( 'lscc_sync_log', array() );
+		$log = is_array( $log ) ? $log : array();
+		foreach ( $log as $i => $row ) {
+			if ( isset( $row['ts'] ) && (int) $row['ts'] === (int) $ts ) {
+				unset( $log[ $i ] );
+				break;
+			}
+		}
+		update_option( 'lscc_sync_log', array_values( $log ), false );
+	}
+
+	/** Delete the nights a particular upload brought in, then drop its log row. */
+	public static function handle_delete_upload() {
+		self::guard( 'lscc_delete_upload' );
+		$ts    = isset( $_POST['ts'] ) ? absint( $_POST['ts'] ) : 0;
+		$log   = get_option( 'lscc_sync_log', array() );
+		$dates = array();
+		foreach ( is_array( $log ) ? $log : array() as $row ) {
+			if ( isset( $row['ts'] ) && (int) $row['ts'] === $ts && isset( $row['dates'] ) && is_array( $row['dates'] ) ) {
+				$dates = $row['dates'];
+				break;
+			}
+		}
+		$n = $dates ? LSCC_DB::delete_days( $dates ) : 0;
+		self::log_without( $ts );
+		self::back( 'lscc-settings', $dates ? 'deleted' : 'nothing', array( 'lscc_n' => $n ) );
+	}
+
+	public static function handle_remove_log() {
+		self::guard( 'lscc_remove_log' );
+		self::log_without( isset( $_POST['ts'] ) ? absint( $_POST['ts'] ) : 0 );
+		self::back( 'lscc-settings', 'log_removed' );
+	}
+
+	public static function handle_clear_log() {
+		self::guard( 'lscc_clear_log' );
+		update_option( 'lscc_sync_log', array(), false );
+		self::back( 'lscc-settings', 'log_removed' );
+	}
+
+	public static function handle_unblock() {
+		self::guard( 'lscc_unblock' );
+		$date = isset( $_POST['date'] ) ? sanitize_text_field( wp_unslash( $_POST['date'] ) ) : '';
+		if ( LSCC_Settings::valid_date( $date ) ) {
+			LSCC_DB::unblock( $date );
+		}
+		self::back( 'lscc', 'restored' );
+	}
+
+	public static function handle_clear_floor() {
+		self::guard( 'lscc_clear_floor' );
+		LSCC_Settings::set_floor( '' );
+		self::back( 'lscc', 'floor_clear' );
+	}
+
+	public static function handle_reset_all() {
+		self::guard( 'lscc_reset_all' );
+		$confirm = isset( $_POST['confirm_text'] ) ? trim( sanitize_text_field( wp_unslash( $_POST['confirm_text'] ) ) ) : '';
+		if ( 'RESET' !== $confirm ) {
+			self::back( 'lscc', 'reset_bad' );
+		}
+		$restart = isset( $_POST['restart'] ) ? sanitize_key( wp_unslash( $_POST['restart'] ) ) : 'tonight';
+		LSCC_DB::reset_all( in_array( $restart, array( 'tonight', 'tomorrow', 'all' ), true ) ? $restart : 'tonight' );
+		self::back( 'lscc', 'reset_done' );
 	}
 
 	public static function handle_lock_day() {

@@ -17,6 +17,7 @@ class LSCC_Settings {
 			'public_api'          => 1,    // allow [car_counter live="true"] to poll
 			'stale_hours'         => 36,   // warn when nothing has arrived for this long
 			'delete_on_uninstall' => 0,
+			'data_floor'          => '',   // set by "Reset all data": uploads for nights before this date are ignored
 		);
 	}
 
@@ -54,6 +55,12 @@ class LSCC_Settings {
 		$new['delete_on_uninstall'] = empty( $in['delete_on_uninstall'] ) ? 0 : 1;
 		update_option( self::OPTION, $new, false );
 		LSCC_DB::bump_cache();
+	}
+
+	public static function set_floor( $date ) {
+		$all               = self::all();
+		$all['data_floor'] = self::valid_date( (string) $date ) ? $date : '';
+		update_option( self::OPTION, $all, false );
 	}
 
 	public static function generate_secret() {
