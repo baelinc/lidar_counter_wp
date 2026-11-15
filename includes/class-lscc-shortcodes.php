@@ -63,6 +63,65 @@ class LSCC_Shortcodes {
 		}
 	}
 
+	/** Build one designed card for a stat (icon, trend, progress, sparkline where it makes sense). */
+	public static function stat_card( $name, array $s, array $opts = array() ) {
+		$d    = self::stat_data( $name, $s );
+		$o    = array();
+		$icons = array( 'total' => 'car', 'tonight' => 'moon', 'last_night' => 'calendar', 'best_night' => 'star', 'average' => 'bars', 'nights' => 'calendar', 'busiest_hour' => 'clock', 'updated' => 'sync' );
+		if ( isset( $icons[ $name ] ) ) {
+			$o['icon'] = $icons[ $name ];
+		}
+		$sub = $d[3];
+		if ( null !== $d[2] && in_array( $name, array( 'total', 'tonight', 'last_night', 'nights', 'average', 'best_night' ), true ) ) {
+			$o['count'] = (int) $d[2];
+		}
+		if ( 'total' === $name ) {
+			if ( ! empty( $opts['hero'] ) ) {
+				$o['hero']  = true;
+				$o['spark'] = isset( $opts['spark'] ) ? $opts['spark'] : array();
+			}
+			if ( $s['nights'] ) {
+				/* translators: %s: number of nights */
+				$sub = sprintf( _n( 'across %s night', 'across %s nights', $s['nights'], 'light-show-car-counter' ), number_format_i18n( $s['nights'] ) );
+			}
+		} elseif ( 'tonight' === $name ) {
+			if ( $s['best'] && $s['best']['total'] > 0 ) {
+				$o['progress'] = $s['tonight'] / $s['best']['total'];
+				/* translators: %d: percent */
+				$sub = $s['tonight'] >= $s['best']['total'] && $s['tonight'] > 0 ? __( 'A new best night!', 'light-show-car-counter' ) : sprintf( __( '%d%% of the best night', 'light-show-car-counter' ), min( 100, round( 100 * $s['tonight'] / $s['best']['total'] ) ) );
+			}
+			if ( $s['updated'] && ( time() - $s['updated'] ) < 15 * MINUTE_IN_SECONDS ) {
+				$o['live'] = true;
+			}
+		} elseif ( 'last_night' === $name && $s['last_night'] && $s['average'] > 0 ) {
+			$pct = (int) round( 100 * ( $s['last_night']['total'] - $s['average'] ) / $s['average'] );
+			if ( 0 !== $pct ) {
+				/* translators: %d: percent */
+				$o['trend'] = array( $pct > 0 ? 'up' : 'down', ( $pct > 0 ? "\xE2\x96\xB2 " : "\xE2\x96\xBC " ) . sprintf( __( '%d%% vs average', 'light-show-car-counter' ), abs( $pct ) ) );
+			}
+		}
+		return LSCC_Render::card( $d[0], $d[1], $sub, $o );
+	}
+
+	/** Cars per night for the last $n nights with data (oldest first), for sparklines. */
+	public static function recent_totals( $since = '', $until = '', $n = 14 ) {
+		$days = LSCC_DB::get_days( array( 'since' => $since, 'until' => $until, 'order' => 'DESC', 'limit' => $n ) );
+		return array_reverse( array_column( $days, 'total' ) );
+	}
+
+	/** Shown to admins only: saved nights that the season dates leave out of the numbers. */
+	public static function season_note() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return '';
+		}
+		$o = LSCC_DB::outside_season();
+		if ( ! $o['nights'] ) {
+			return '';
+		}
+		return '<p class="lscc-admin-note">' . esc_html( sprintf( /* translators: 1: nights 2: cars */ _n( 'Admin note: %1$d saved night (%2$s cars) is outside your Season dates, so it is not counted here.', 'Admin note: %1$d saved nights (%2$s cars) are outside your Season dates, so they are not counted here.', $o['nights'], 'light-show-car-counter' ), $o['nights'], number_format_i18n( $o['cars'] ) ) )
+			. ' <a href="' . esc_url( admin_url( 'admin.php?page=lscc-settings' ) ) . '">' . esc_html__( 'Change season dates', 'light-show-car-counter' ) . '</a></p>';
+	}
+
 	private static function stat_names() {
 		return array( 'total', 'tonight', 'last_night', 'best_night', 'best_night_date', 'average', 'nights', 'busiest_hour', 'updated', 'date' );
 	}
@@ -98,6 +157,10 @@ class LSCC_Shortcodes {
 			. esc_html( $atts['prefix'] ) . $value . esc_html( $atts['suffix'] ) . '</span>';
 	}
 
+	private static function enqueue_cards() {
+		wp_enqueue_script( 'lscc-cards', LSCC_URL . 'assets/lscc-cards.js', array(), LSCC_VERSION, true );
+	}
+
 	private static function enqueue_live() {
 		if ( wp_script_is( 'lscc-live', 'enqueued' ) ) {
 			return;
@@ -112,21 +175,23 @@ class LSCC_Shortcodes {
 	/* ---------------- [car_counter_stats] ---------------- */
 	public static function stats( $atts ) {
 		$atts = shortcode_atts( array(
-			'cards' => 'total,nights,average,best_night', 'title' => '', 'since' => '', 'until' => '',
+			'cards' => 'total,tonight,last_night,best_night,average,busiest_hour', 'title' => '', 'since' => '', 'until' => '', 'hero' => 'true',
 		), $atts, 'car_counter_stats' );
 		self::assets();
+		self::enqueue_cards();
 		list( $since, $until ) = self::range( $atts );
 		$s     = LSCC_DB::summary( $since, $until );
+		$hero  = self::truthy( $atts['hero'] );
+		$opts  = array( 'hero' => $hero, 'spark' => $hero ? self::recent_totals( null === $since ? (string) LSCC_Settings::get( 'season_start' ) : $since, null === $until ? (string) LSCC_Settings::get( 'season_end' ) : $until ) : array() );
 		$cards = '';
 		foreach ( array_slice( array_map( 'sanitize_key', explode( ',', $atts['cards'] ) ), 0, 12 ) as $name ) {
 			if ( ! in_array( $name, self::stat_names(), true ) || 'date' === $name ) {
 				continue;
 			}
-			$d      = self::stat_data( $name, $s );
-			$cards .= LSCC_Render::card( $d[0], $d[1], $d[3] );
+			$cards .= self::stat_card( $name, $s, $opts );
 		}
 		$title = '' !== $atts['title'] ? '<h3 class="lscc-title">' . esc_html( $atts['title'] ) . '</h3>' : '';
-		return LSCC_Render::wrap( $title . '<div class="lscc-cards">' . $cards . '</div>', 'lscc-stats' );
+		return LSCC_Render::wrap( $title . '<div class="lscc-cards">' . $cards . '</div>' . ( null === $since && null === $until ? self::season_note() : '' ), 'lscc-stats' );
 	}
 
 	/* ---------------- [car_counter_chart] ---------------- */

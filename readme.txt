@@ -2,7 +2,7 @@
 Tags: christmas lights, counter, statistics, shortcode, falcon player
 Requires at least: 5.3
 Requires PHP: 7.2
-Stable tag: 1.2.0
+Stable tag: 1.3.0
 License: GPLv2 or later
 
 Receives nightly car counts from the FPP "Car Counter" plugin (Falcon Player) and shows them on your site with shortcodes and charts.
@@ -62,6 +62,9 @@ Your Pi re-sends its last few nights on every upload, so deleted nights are reme
 Data is kept unless you tick "On uninstall" in Settings.
 
 == Changelog ==
+= 1.3.0 =
+* New card design: icons, a large "Cars so far" hero card with a trend line, tonight progress bar vs your best night, up/down vs average badge, live indicator, count-up animation. Works on dark and light themes.
+* Warns admins when saved nights fall outside the Season dates (the usual reason cards show 0).
 = 1.2.0 =
 * Built-in updater: checks GitHub, shows an "Update now" banner and the normal WordPress update link, plus a "Check for updates now" button in Settings.
 = 1.1.0 =

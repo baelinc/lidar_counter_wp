@@ -90,9 +90,76 @@ class LSCC_Render {
 		return $html . '</tbody></table>';
 	}
 
-	public static function card( $label, $value, $sub = '' ) {
-		return '<div class="lscc-card"><div class="lscc-card-label">' . esc_html( $label ) . '</div><div class="lscc-card-value">' . esc_html( $value ) . '</div>'
-			. ( '' !== $sub ? '<div class="lscc-card-sub">' . esc_html( $sub ) . '</div>' : '' ) . '</div>';
+	/** Small inline icons (24x24, stroke based) keyed by stat. */
+	public static function icon( $key ) {
+		$paths = array(
+			'car'      => '<path d="M5 16l1.4-4.6A2 2 0 0 1 8.3 10h7.4a2 2 0 0 1 1.9 1.4L19 16"/><rect x="3" y="16" width="18" height="4" rx="1.5"/><circle cx="7.5" cy="18" r=".6"/><circle cx="16.5" cy="18" r=".6"/><path d="M9 5l3-2 3 2"/>',
+			'moon'     => '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
+			'calendar' => '<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+			'star'     => '<path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.8 6.8 19.6l1-5.8L3.5 9.7l5.9-.9z"/>',
+			'bars'     => '<path d="M5 20V11M12 20V5M19 20v-7"/>',
+			'clock'    => '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/>',
+			'sync'     => '<path d="M20 11a8 8 0 0 0-14-4L4 9M4 13a8 8 0 0 0 14 4l2-2M4 4v5h5M20 20v-5h-5"/>',
+		);
+		if ( ! isset( $paths[ $key ] ) ) {
+			return '';
+		}
+		return '<svg class="lscc-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' . $paths[ $key ] . '</svg>';
+	}
+
+	/** Tiny area/line chart for the hero card. $values: list of numbers, oldest first. */
+	public static function sparkline( array $values ) {
+		$values = array_values( array_map( 'floatval', $values ) );
+		$n      = count( $values );
+		if ( $n < 2 ) {
+			return '';
+		}
+		$w = 240; $h = 56; $pad = 4;
+		$max = max( $values );
+		$max = $max > 0 ? $max : 1;
+		$pts = array();
+		foreach ( $values as $i => $v ) {
+			$x     = round( $pad + ( $w - 2 * $pad ) * $i / ( $n - 1 ), 1 );
+			$y     = round( $h - $pad - ( $h - 2 * $pad ) * ( $v / $max ), 1 );
+			$pts[] = $x . ',' . $y;
+		}
+		$last = explode( ',', end( $pts ) );
+		return '<svg class="lscc-spark" viewBox="0 0 ' . $w . ' ' . $h . '" preserveAspectRatio="none" role="img" aria-label="' . esc_attr__( 'Cars per night, recent trend', 'light-show-car-counter' ) . '">'
+			. '<polygon class="lscc-spark-area" points="' . $pad . ',' . ( $h - $pad ) . ' ' . implode( ' ', $pts ) . ' ' . ( $w - $pad ) . ',' . ( $h - $pad ) . '"/>'
+			. '<polyline class="lscc-spark-line" fill="none" points="' . implode( ' ', $pts ) . '"/>'
+			. '<circle class="lscc-spark-dot" cx="' . esc_attr( $last[0] ) . '" cy="' . esc_attr( $last[1] ) . '" r="3.2"/></svg>';
+	}
+
+	/**
+	 * A stat card.
+	 * $o: icon (key), hero (bool), spark (array), progress (0..1), trend (array(dir,text)), live (bool), count (int for count-up)
+	 */
+	public static function card( $label, $value, $sub = '', $o = array() ) {
+		$o     = is_array( $o ) ? $o : array();
+		$class = 'lscc-card' . ( ! empty( $o['hero'] ) ? ' lscc-card-hero' : '' ) . ( ! empty( $o['icon'] ) ? ' lscc-has-icon' : '' );
+		$h     = '<div class="' . esc_attr( $class ) . '">';
+		$h    .= '<div class="lscc-card-head">' . ( ! empty( $o['icon'] ) ? '<span class="lscc-badge-icon">' . self::icon( $o['icon'] ) . '</span>' : '' )
+			. '<span class="lscc-card-label">' . esc_html( $label ) . '</span>'
+			. '</div>';
+		$cnt   = isset( $o['count'] ) && null !== $o['count'] ? ' data-lscc-count="' . (int) $o['count'] . '"' : '';
+		$h    .= '<div class="lscc-card-value"' . $cnt . '>' . esc_html( $value ) . '</div>';
+		if ( ! empty( $o['live'] ) ) {
+			$h .= '<div class="lscc-live" title="' . esc_attr__( 'Receiving live data', 'light-show-car-counter' ) . '"><i></i>' . esc_html__( 'Live', 'light-show-car-counter' ) . '</div>';
+		}
+		if ( ! empty( $o['trend'] ) ) {
+			$h .= '<div class="lscc-trend lscc-trend-' . esc_attr( $o['trend'][0] ) . '">' . esc_html( $o['trend'][1] ) . '</div>';
+		}
+		if ( '' !== $sub ) {
+			$h .= '<div class="lscc-card-sub">' . esc_html( $sub ) . '</div>';
+		}
+		if ( isset( $o['progress'] ) && null !== $o['progress'] ) {
+			$pct = max( 0, min( 100, round( $o['progress'] * 100 ) ) );
+			$h  .= '<div class="lscc-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' . (int) $pct . '"><span style="width:' . (int) $pct . '%"></span></div>';
+		}
+		if ( ! empty( $o['spark'] ) ) {
+			$h .= self::sparkline( $o['spark'] );
+		}
+		return $h . '</div>';
 	}
 
 	/** Wrap output so the accent colour from settings is applied. */

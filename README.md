@@ -29,3 +29,6 @@ Because the Pi re-sends its recent history with each upload, deleted nights are 
 
 ## Updates
 The plugin checks this repository for a newer `Version:` in `light-show-car-counter.php` and shows an **Update now** button (banner on the plugin pages and the normal Plugins-page notice). **Settings → Plugin updates** has *Check for updates now*. To publish an update, bump the version and push to `main`.
+
+## Cards
+`[car_counter_stats]` shows designed cards: a large **Cars so far** card with a trend line, **Tonight** with a progress bar against your best night (and a Live dot while the Pi is uploading), **Last night** with an up/down badge versus the average, plus best night, average and busiest hour. Options: `cards="total,tonight,last_night,best_night,average,busiest_hour,nights"`, `hero="false"` for a plain grid. Cards only count nights inside the Season dates in Settings; admins see a note when saved nights fall outside them.

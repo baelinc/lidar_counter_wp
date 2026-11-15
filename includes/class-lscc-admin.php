@@ -35,6 +35,7 @@ class LSCC_Admin {
 		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
 		if ( 0 === strpos( $page, 'lscc' ) || 'index.php' === $hook ) {
 			wp_enqueue_style( 'lscc', LSCC_URL . 'assets/lscc.css', array(), LSCC_VERSION );
+			wp_enqueue_script( 'lscc-cards', LSCC_URL . 'assets/lscc-cards.js', array(), LSCC_VERSION, true );
 		}
 	}
 
@@ -68,6 +69,7 @@ class LSCC_Admin {
 			'restored'     => array( 'success', __( 'Restored. The next upload from the Pi can bring that night back.', 'light-show-car-counter' ) ),
 			'floor_clear'  => array( 'success', __( 'Now accepting all nights again. The next upload re-sends the Pi\'s recent history.', 'light-show-car-counter' ) ),
 			'reset_done'   => array( 'success', __( 'All data was deleted.', 'light-show-car-counter' ) ),
+			'day_outside'  => array( 'warning', __( 'Night saved – but its date is outside your Season dates, so it is not counted in the cards. Change the season dates in Settings if you want it counted.', 'light-show-car-counter' ) ),
 			'upd_none'     => array( 'success', __( 'You are running the latest version.', 'light-show-car-counter' ) ),
 			'upd_found'    => array( 'warning', __( 'A new version is available – use the Update now button.', 'light-show-car-counter' ) ),
 			'upd_error'    => array( 'error', __( 'Could not check GitHub for updates. Try again in a few minutes.', 'light-show-car-counter' ) ),
@@ -122,11 +124,17 @@ class LSCC_Admin {
 		echo self::health_box();
 
 		$cards = '';
+		$opts  = array( 'hero' => true, 'spark' => LSCC_Shortcodes::recent_totals( (string) LSCC_Settings::get( 'season_start' ), (string) LSCC_Settings::get( 'season_end' ) ) );
 		foreach ( array( 'total', 'tonight', 'last_night', 'nights', 'average', 'best_night', 'busiest_hour' ) as $name ) {
-			$d      = LSCC_Shortcodes::stat_data( $name, $s );
-			$cards .= LSCC_Render::card( $d[0], $d[1], $d[3] );
+			$cards .= LSCC_Shortcodes::stat_card( $name, $s, $opts );
 		}
 		echo LSCC_Render::wrap( '<div class="lscc-cards">' . $cards . '</div>' );
+		$out = LSCC_DB::outside_season();
+		if ( $out['nights'] ) {
+			echo '<div class="lscc-box lscc-health-stale"><strong>' . esc_html__( 'Some nights are not in the cards above.', 'light-show-car-counter' ) . '</strong> '
+				. esc_html( sprintf( /* translators: 1: nights 2: cars 3: start 4: end */ __( '%1$d saved night(s) with %2$s cars fall outside your Season dates (%3$s to %4$s), so they are left out of the totals. The chart below still shows them.', 'light-show-car-counter' ), $out['nights'], number_format_i18n( $out['cars'] ), '' !== LSCC_Settings::get( 'season_start' ) ? LSCC_Settings::get( 'season_start' ) : __( 'any', 'light-show-car-counter' ), '' !== LSCC_Settings::get( 'season_end' ) ? LSCC_Settings::get( 'season_end' ) : __( 'any', 'light-show-car-counter' ) ) )
+				. ' <a href="' . esc_url( admin_url( 'admin.php?page=lscc-settings' ) ) . '">' . esc_html__( 'Change season dates', 'light-show-car-counter' ) . '</a></div>';
+		}
 
 		$recent = array_reverse( LSCC_DB::get_days( array( 'order' => 'DESC', 'limit' => 30, 'only_nonzero' => true ) ) );
 		$labels = array(); $values = array();
@@ -345,8 +353,7 @@ class LSCC_Admin {
 		$s     = LSCC_DB::summary();
 		$cards = '';
 		foreach ( array( 'total', 'tonight', 'last_night' ) as $name ) {
-			$d      = LSCC_Shortcodes::stat_data( $name, $s );
-			$cards .= LSCC_Render::card( $d[0], $d[1] );
+			$cards .= LSCC_Shortcodes::stat_card( $name, $s );
 		}
 		echo LSCC_Render::wrap( '<div class="lscc-cards">' . $cards . '</div>' );
 		$h = self::sync_health();
@@ -392,7 +399,9 @@ class LSCC_Admin {
 		), 'manual', true, ! empty( $_POST['locked'] ) );
 		LSCC_DB::unblock( $date );   // adding a night by hand means you want it
 		LSCC_DB::bump_cache();
-		self::back( 'lscc', 'day_saved' );
+		$ss = (string) LSCC_Settings::get( 'season_start' );
+		$se = (string) LSCC_Settings::get( 'season_end' );
+		self::back( 'lscc', ( ( '' !== $ss && $date < $ss ) || ( '' !== $se && $date > $se ) ) ? 'day_outside' : 'day_saved' );
 	}
 
 	public static function handle_delete_day() {

@@ -225,6 +225,23 @@ class LSCC_DB {
 		return array_map( array( __CLASS__, 'normalize' ), is_array( $rows ) ? $rows : array() );
 	}
 
+	/** Stored nights that fall outside the season window (so are left out of totals). */
+	public static function outside_season() {
+		$since = (string) LSCC_Settings::get( 'season_start' );
+		$until = (string) LSCC_Settings::get( 'season_end' );
+		$out   = array( 'nights' => 0, 'cars' => 0 );
+		if ( '' === $since && '' === $until ) {
+			return $out;
+		}
+		foreach ( self::get_days( array( 'limit' => 1000 ) ) as $d ) {
+			if ( ( '' !== $since && $d['date'] < $since ) || ( '' !== $until && $d['date'] > $until ) ) {
+				$out['nights']++;
+				$out['cars'] += $d['total'];
+			}
+		}
+		return $out;
+	}
+
 	/**
 	 * Aggregate statistics for the season (or a custom since/until).
 	 * Cached until the next write.

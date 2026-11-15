@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Light Show Car Counter
  * Description:       Receives nightly car counts from the FPP "Car Counter" plugin and shows them on your site with shortcodes, charts and an admin dashboard.
- * Version:           1.2.0
+ * Version:           1.3.0
  * Requires at least: 5.3
  * Requires PHP:      7.2
  * License:           GPL-2.0-or-later
@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'LSCC_VERSION', '1.2.0' );
+define( 'LSCC_VERSION', '1.3.0' );
 define( 'LSCC_FILE', __FILE__ );
 define( 'LSCC_DIR', plugin_dir_path( __FILE__ ) );
 define( 'LSCC_URL', plugin_dir_url( __FILE__ ) );

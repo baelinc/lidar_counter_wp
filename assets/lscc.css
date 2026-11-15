@@ -1,11 +1,35 @@
 /* Light Show Car Counter - front end + admin */
 .lscc { --lscc-accent: #c62828; margin: 1.2em 0; }
 .lscc-title { margin: 0 0 .5em; }
-.lscc-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
-.lscc-card { border: 1px solid rgba(128,128,128,.3); border-radius: 10px; padding: 14px 16px; text-align: center; }
-.lscc-card-value { font-size: 2.2em; font-weight: 700; line-height: 1.15; color: var(--lscc-accent); }
-.lscc-card-label { opacity: .75; font-size: .9em; }
-.lscc-card-sub { opacity: .6; font-size: .8em; margin-top: 2px; }
+.lscc-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; }
+.lscc-card { position: relative; overflow: hidden; border-radius: 16px; padding: 16px 18px 18px; text-align: left; box-sizing: border-box;
+  background: linear-gradient(160deg, rgba(128,128,128,.16), rgba(128,128,128,.06));
+  border: 1px solid rgba(128,128,128,.28); box-shadow: 0 6px 18px rgba(0,0,0,.12); transition: transform .2s ease, box-shadow .2s ease; }
+.lscc-card::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px; background: linear-gradient(90deg, var(--lscc-accent), rgba(255,255,255,0)); opacity: .95; }
+.lscc-card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,.18); }
+.lscc-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.lscc-badge-icon { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 12px; flex: none;
+  background: var(--lscc-accent); color: #fff; box-shadow: 0 3px 10px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.25); }
+.lscc-card-label { font-size: .78em; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; opacity: .8; line-height: 1.2; }
+.lscc-card-value { font-size: 2.5em; font-weight: 800; line-height: 1.05; letter-spacing: -.01em; font-variant-numeric: tabular-nums; color: inherit; }
+.lscc-card-sub { opacity: .7; font-size: .85em; margin-top: 4px; }
+.lscc-trend { display: inline-block; margin-top: 6px; padding: 2px 10px; border-radius: 999px; font-size: .78em; font-weight: 700; background: rgba(128,128,128,.2); }
+.lscc-trend-up { background: rgba(46,160,67,.22); color: #2ea043; }
+.lscc-trend-down { background: rgba(229,83,75,.22); color: #e5534b; }
+.lscc-progress { height: 8px; border-radius: 999px; background: rgba(128,128,128,.25); margin-top: 10px; overflow: hidden; }
+.lscc-progress span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--lscc-accent), #ffb300); transition: width 1s ease; }
+.lscc-live { margin-top: 6px; display: flex; align-items: center; gap: 5px; font-size: .68em; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #2ea043; }
+.lscc-live i { width: 8px; height: 8px; border-radius: 50%; background: #2ea043; box-shadow: 0 0 0 0 rgba(46,160,67,.6); animation: lscc-pulse 1.8s infinite; }
+@keyframes lscc-pulse { 70% { box-shadow: 0 0 0 9px rgba(46,160,67,0); } 100% { box-shadow: 0 0 0 0 rgba(46,160,67,0); } }
+.lscc-card-hero { grid-column: span 2; background: linear-gradient(150deg, color-mix(in srgb, var(--lscc-accent) 38%, transparent), rgba(128,128,128,.07) 70%); }
+.lscc-card-hero .lscc-card-value { font-size: 3.6em; }
+.lscc-spark { display: block; width: 100%; height: 64px; margin-top: 10px; }
+.lscc-spark-area { fill: var(--lscc-accent); opacity: .28; }
+.lscc-spark-line { stroke: var(--lscc-accent); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; filter: brightness(1.25); }
+.lscc-spark-dot { fill: #fff; stroke: var(--lscc-accent); stroke-width: 2; }
+.lscc-admin-note { margin: 10px 0 0; padding: 8px 12px; border-left: 3px solid #dba617; background: rgba(219,166,23,.14); font-size: .85em; border-radius: 4px; }
+@media (max-width: 520px) { .lscc-card-hero { grid-column: 1 / -1; } .lscc-card-value { font-size: 2.1em; } .lscc-card-hero .lscc-card-value { font-size: 3em; } }
+@media (prefers-reduced-motion: reduce) { .lscc-card, .lscc-progress span { transition: none; } .lscc-live i { animation: none; } }
 .lscc-chart { width: 100%; height: auto; display: block; color: inherit; }
 .lscc-bar { fill: var(--lscc-accent); }
 .lscc-line { stroke: var(--lscc-accent); stroke-width: 3; stroke-linejoin: round; }
